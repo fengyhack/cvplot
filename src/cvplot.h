@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <mutex>
+#include <iomanip>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -61,18 +62,21 @@ namespace cvplot
 
 		Color Linear(double intensity)
 		{
-			if (intensity <= 0 || intensity > 1.0)
+			if (intensity <= 0)
 			{
 				return Color(0, 0, 0, a_);
 			}
+			else if (intensity >= 255.0)
+			{
+				return Color(r_, g_, b_, a_);
+			}
 
-			int r = r_ * intensity;
-			int g = g_ * intensity;
-			int b = b_ * intensity;
-			int max = std::max({ r,g,b,255 });
-			r = r * 255 / max;
-			g = g * 255 / max;
-			b = b * 255 / max;
+			int r = (int)(r_ * intensity + 0.5);
+			int g = (int)(g_ * intensity + 0.5);
+			int b = (int)(b_ * intensity + 0.5);
+			r = r > 255 ? 255 : r;
+			g = g > 255 ? 255 : g;
+			b = b > 255 ? 255 : b;
 			return Color(r, g, b, a_);
 		}
 
@@ -97,6 +101,16 @@ namespace cvplot
 			return cv::Scalar(b_, g_, r_, a_);
 		}
 
+		cv::Vec4b ToVec4b() const
+		{
+			return cv::Vec4b(b_, g_, r_, a_);
+		}
+
+		cv::Vec3b ToVec3b() const
+		{
+			return cv::Vec3b(b_, g_, r_);
+		}
+
 	private:
 		byte r_, g_, b_, a_;
 	};
@@ -105,18 +119,20 @@ namespace cvplot
 	{
 		typedef int Type;
 
-		static const Type Bar = 0;
-		static const Type Line = 1;
-		static const Type Scatter = 2;
-		static const Type Elevation = 3;
+		static const Type Bar = 1;
+		static const Type Trends = 2;
+		static const Type Line = 3;
+		static const Type Scatter = 4;
+		static const Type Elevation = 5;
 
 		static int GetDimension(Type type)
 		{
-			int dim = 1;
+			int dim;
 
 			switch (type)
 			{
 			case Bar:
+			case Trends:
 				dim = 1;
 				break;
 			case Line:
@@ -127,6 +143,7 @@ namespace cvplot
 				dim = 3;
 				break;
 			default:
+				dim = 1;
 				break;
 			}
 
@@ -149,6 +166,18 @@ namespace cvplot
 
 	namespace color
 	{
+		static const byte GAMMA_LUT[] =
+		{
+			  0,  20,  28,  33,  38,  42,  46,  49,  52,  55,  58,  61,  63,  65,  68,  70,  72,  74,  76,  78,  80,  81,  83,  85,  87,  88,  90,  91,  93,  94,  96,  97,
+			 99, 100, 102, 103, 104, 106, 107, 108, 109, 111, 112, 113, 114, 115, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 128, 129, 130, 131, 132, 133, 134, 135,
+			136, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 147, 148, 149, 150, 151, 152, 153, 153, 154, 155, 156, 157, 158, 158, 159, 160, 161, 162, 162,
+			163, 164, 165, 165, 166, 167, 168, 168, 169, 170, 171, 171, 172, 173, 174, 174, 175, 176, 176, 177, 178, 178, 179, 180, 181, 181, 182, 183, 183, 184, 185, 185,
+			186, 187, 187, 188, 189, 189, 190, 190, 191, 192, 192, 193, 194, 194, 195, 196, 196, 197, 197, 198, 199, 199, 200, 200, 201, 202, 202, 203, 203, 204, 205, 205,
+			206, 206, 207, 208, 208, 209, 209, 210, 210, 211, 212, 212, 213, 213, 214, 214, 215, 216, 216, 217, 217, 218, 218, 219, 219, 220, 220, 221, 222, 222, 223, 223,
+			224, 224, 225, 225, 226, 226, 227, 227, 228, 228, 229, 229, 230, 230, 231, 231, 232, 232, 233, 233, 234, 234, 235, 235, 236, 236, 237, 237, 238, 238, 239, 239,
+			240, 240, 241, 241, 242, 242, 243, 243, 244, 244, 245, 245, 246, 246, 247, 247, 248, 248, 249, 249, 249, 250, 250, 251, 251, 252, 252, 253, 253, 254, 254, 255
+		};
+
 		static const Color Transparent = Color(255, 255, 255, 0);
 		static const Color Red = Color(255, 0, 0);
 		static const Color OrangeRed = Color(255, 69, 0);
@@ -166,108 +195,6 @@ namespace cvplot
 		static const Color LightGray = Color(220, 220, 220);
 		static const Color White = Color(255, 255, 255);
 
-		typedef int Gamma;
-
-		namespace gamma
-		{
-			static byte GAMMA_LUT2P2[] =
-			{
-				  0,   1,   3,   4,   6,   7,   9,  11,  12,  14,  15,  17,  18,  20,  22,  23,  25,  26,  28,  29,  31,  33,  34,  36,  37,  39,  40,  42,  44,  45,  47,  48,
-				 50,  51,  53,  55,  56,  58,  59,  61,  63,  64,  66,  67,  69,  70,  72,  74,  75,  77,  78,  80,  81,  83,  85,  86,  88,  89,  91,  92,  94,  96,  97,  99,
-				100, 102, 103, 105, 107, 108, 110, 111, 113, 115, 116, 118, 119, 121, 122, 124, 126, 127, 129, 130, 132, 133, 135, 137, 138, 140, 141, 143, 144, 146, 148, 149,
-				151, 152, 154, 155, 157, 159, 160, 162, 163, 165, 166, 168, 170, 171, 173, 174, 176, 178, 179, 181, 182, 184, 185, 187, 189, 190, 192, 193, 195, 196, 198, 200,
-				201, 203, 204, 206, 207, 209, 211, 212, 214, 215, 217, 218, 220, 222, 223, 225, 226, 228, 230, 231, 233, 234, 236, 237, 239, 241, 242, 244, 245, 247, 248, 250,
-				252, 253, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
-			};
-
-			static byte GAMMA_LUT2P0[] =
-			{
-				  0,   1,   3,   4,   6,   8,   9,  11,  13,  14,  16,  18,  19,  21,  23,  24,  26,  28,  29,  31,  32,  34,  36,  37,  39,  41,  42,  44,  46,  47,  49,  51,
-				 52,  54,  56,  57,  59,  61,  62,  64,  65,  67,  69,  70,  72,  74,  75,  77,  79,  80,  82,  84,  85,  87,  89,  90,  92,  93,  95,  97,  98, 100, 102, 103,
-				105, 107, 108, 110, 112, 113, 115, 117, 118, 120, 122, 123, 125, 126, 128, 130, 131, 133, 135, 136, 138, 140, 141, 143, 145, 146, 148, 150, 151, 153, 154, 156,
-				158, 159, 161, 163, 164, 166, 168, 169, 171, 173, 174, 176, 178, 179, 181, 183, 184, 186, 187, 189, 191, 192, 194, 196, 197, 199, 201, 202, 204, 206, 207, 209,
-				211, 212, 214, 215, 217, 219, 220, 222, 224, 225, 227, 229, 230, 232, 234, 235, 237, 239, 240, 242, 244, 245, 247, 248, 250, 252, 253, 255, 255, 255, 255, 255,
-				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
-			};
-
-			static byte GAMMA_LUT1P8[] =
-			{
-				  0,   1,   3,   5,   6,   8,  10,  12,  13,  15,  17,  19,  20,  22,  24,  26,  27,  29,  31,  33,  34,  36,  38,  40,  41,  43,  45,  47,  48,  50,  52,  54,
-				 55,  57,  59,  61,  62,  64,  66,  67,  69,  71,  73,  74,  76,  78,  80,  81,  83,  85,  87,  88,  90,  92,  94,  95,  97,  99, 101, 102, 104, 106, 108, 109,
-				111, 113, 115, 116, 118, 120, 122, 123, 125, 127, 128, 130, 132, 134, 135, 137, 139, 141, 142, 144, 146, 148, 149, 151, 153, 155, 156, 158, 160, 162, 163, 165,
-				167, 169, 170, 172, 174, 176, 177, 179, 181, 183, 184, 186, 188, 189, 191, 193, 195, 196, 198, 200, 202, 203, 205, 207, 209, 210, 212, 214, 216, 217, 219, 221,
-				223, 224, 226, 228, 230, 231, 233, 235, 237, 238, 240, 242, 244, 245, 247, 249, 250, 252, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-				255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
-			};
-
-			static const Gamma G22 = 1;
-			static const Gamma G20 = 2;
-			static const Gamma G18 = 3;
-		}
-
-		static Color Remap(cv::Scalar color, Gamma gamma = gamma::G20)
-		{
-			byte b = color[0];
-			byte g = color[1];
-			byte r = color[2];
-			byte a = color[3];
-
-			switch (gamma)
-			{
-			case gamma::G22:
-				r = gamma::GAMMA_LUT2P2[r];
-				g = gamma::GAMMA_LUT2P2[g];
-				b = gamma::GAMMA_LUT2P2[b];
-				break;
-			case gamma::G20:
-				r = gamma::GAMMA_LUT2P0[r];
-				g = gamma::GAMMA_LUT2P0[g];
-				b = gamma::GAMMA_LUT2P0[b];
-				break;
-			case gamma::G18:
-				r = gamma::GAMMA_LUT1P8[r];
-				g = gamma::GAMMA_LUT1P8[g];
-				b = gamma::GAMMA_LUT1P8[b];
-				break;
-			default:
-				break;
-			}
-
-			return Color(r, g, b, a);
-		}
-
-		static Color Remap(byte r, byte g, byte b, Gamma gamma = gamma::G20)
-		{
-			switch (gamma)
-			{
-			case gamma::G22:
-				r = gamma::GAMMA_LUT2P2[r];
-				g = gamma::GAMMA_LUT2P2[g];
-				b = gamma::GAMMA_LUT2P2[b];
-				break;
-			case gamma::G20:
-				r = gamma::GAMMA_LUT2P0[r];
-				g = gamma::GAMMA_LUT2P0[g];
-				b = gamma::GAMMA_LUT2P0[b];
-				break;
-			case gamma::G18:
-				r = gamma::GAMMA_LUT1P8[r];
-				g = gamma::GAMMA_LUT1P8[g];
-				b = gamma::GAMMA_LUT1P8[b];
-				break;
-			default:
-				break;
-			}
-
-			return Color(r, g, b);
-		}
-
 		typedef int Scheme;
 
 		namespace scheme
@@ -278,31 +205,52 @@ namespace cvplot
 			static const Scheme Blue = 3;
 		}
 
-		static Color Index(int index, Scheme scheme)
+		static Color Index(byte index, Scheme scheme)
 		{
 			byte r = 0;
 			byte g = 0;
 			byte b = 0;
+			byte v = GAMMA_LUT[index];
 
 			switch (scheme)
 			{
 			case scheme::Red:
-				r = (byte)(index > 255 ? 255 : index);
+				r = v;
+				g = v > 0 ? (v >> 1) : 0;
+				b = g;
 				break;
 			case scheme::Green:
-				g = (byte)(index > 255 ? 255 : index);
+				r = v > 0 ? (v >> 1) : 0;
+				g = v;
+				b = r;
 				break;
 			case scheme::Blue:
-				b = (byte)(index > 255 ? 255 : index);
+				r = v > 0 ? (v >> 1) : 0;
+				g = r;
+				b = v;
 				break;
 			default:
-				r = (byte)index;
-				g = (byte)index;
-				b = (byte)index;
+				r = v;
+				g = v;
+				b = v;
 				break;
 			}
 
-			return Remap(r, g, b);
+			return Color(r, g, b);
+		}
+
+		static Color Gamma(cv::Vec4b color)
+		{
+			byte b = color[0];
+			byte g = color[1];
+			byte r = color[2];
+			byte a = color[3];
+			return Color(GAMMA_LUT[r], GAMMA_LUT[g], GAMMA_LUT[b], a);
+		}
+
+		static byte Gamma(byte c)
+		{
+			return GAMMA_LUT[c];
 		}
 	}
 
@@ -512,7 +460,7 @@ namespace cvplot
 			return dimension_;
 		}
 
-		int GetCount() const
+		int GetSampleCount() const
 		{
 			return values_.size() / dimension_;
 		}
@@ -563,7 +511,8 @@ namespace cvplot
 		}
 
 		void Draw(cv::Mat& target, int index, int division,
-			double x_min, double x_max, double x_delta, double y_min, double y_max, double y_delta)
+			double x_min, double x_max, double y_min, double y_max, double z_min, double z_max,
+			double px_start, double py_start, double px_size, double py_size)
 		{
 			if (values_.size() < dimension_)
 			{
@@ -573,30 +522,74 @@ namespace cvplot
 
 			auto cr = render_color_.ToScalar();
 
+			auto xd = x_max - x_min;
+			auto yd = y_max - y_min;
+
 			switch (chart_type_)
 			{
 			case chart::Bar:
 			{
-				int x1 = (int)(x_min + x_delta * index + x_delta);
-				int x2 = (int)(x1 + x_delta);
-				int xd = (int)(x_delta * division);
+				auto px_delta = px_size / xd;
+				auto py_delta = py_size / yd;
+				auto py_0 = py_delta > 10 ? 0.2 * py_delta : 2;
+				int x1 = (int)(px_start + px_delta * index / (division + 1));
+				int x2 = (int)(x1 + px_delta / (division + 1));
 				int y1 = 0;
 				int y2;
 				int h = target.rows;
 				auto cr1 = render_color_.Cut(90).ToScalar();
+				int fbase;
+				auto fface = cv::FONT_HERSHEY_SIMPLEX;
+				auto fscale = 0.8;
+				cv::Size fsize;
 				for (auto v : values_)
 				{
-					y2 = (int)(v > 0 ? v * y_delta : 0.2 * y_delta);
+					y2 = (int)((v > y_min) ? (v - y_min) * py_delta : py_0);
 					cv::rectangle(target, { x1,h - y1 }, { x2,h - y2 }, cr, -1);
 					char szText[16] = { 0 };
 					sprintf_s(szText, "%g", v);
-					int fbase;
-					auto fface = cv::FONT_HERSHEY_SIMPLEX;
-					auto fscale = 0.8;
-					auto fsize = cv::getTextSize(szText, fface, fscale, 1, &fbase);
-					cv::putText(target, szText, { x1 + ((int)x_delta - fsize.width) / 2,h - y2 - fbase }, fface, fscale, cr1, 1, cv::LINE_AA);
-					x1 += xd;
-					x2 += xd;
+					fsize = cv::getTextSize(szText, fface, fscale, 1, &fbase);
+					cv::putText(target, szText, { (x1 + x2 - fsize.width) / 2,h - y2 - fbase }, fface, fscale, cr1, 1, cv::LINE_AA);
+					x1 += px_delta;
+					x2 += px_delta;
+				}
+			}
+			break;
+			case chart::Trends:
+			{
+				auto px_delta = px_size / xd;
+				auto py_delta = py_size / yd;
+				auto py_0 = py_delta > 10 ? 0.2 * py_delta : 2;
+				auto x_0 = (int)(px_start + 0.5 * division * px_delta / (division + 1.1));
+				int x = x_0;
+				int y;
+				int h = target.rows;
+				std::vector<cv::Point> pts;
+				for (auto v : values_)
+				{
+					y = (int)((v > y_min) ? (v - y_min) * py_delta : py_0);
+					pts.push_back({ x,h - y });
+					x += px_delta;
+				}
+				int r = (marker_size_.width + marker_size_.height);
+				r = (r > 2 && r < 32) ? r : 4;
+				DrawMarkers_(target, pts, marker_type_, render_color_.Cut(64), r, 2);
+				cv::polylines(target, pts, false, cr, 1, cv::LINE_AA);
+
+				auto cr1 = render_color_.Cut(90).ToScalar();
+				int fbase;
+				auto fface = cv::FONT_HERSHEY_SIMPLEX;
+				auto fscale = 0.8;
+				cv::Size fsize;
+				x = x_0;
+				for (auto v : values_)
+				{
+					y = (int)((v > y_min) ? (v - y_min) * py_delta : py_0);
+					char szText[16] = { 0 };
+					sprintf_s(szText, "%g", v);
+					fsize = cv::getTextSize(szText, fface, fscale, 1, &fbase);
+					cv::putText(target, szText, { x - fsize.width / 2,h - y - fbase }, fface, fscale, cr1, 1, cv::LINE_AA);
+					x += px_delta;
 				}
 			}
 			break;
@@ -606,16 +599,20 @@ namespace cvplot
 				int h = target.rows;
 				int ci = 0;
 				std::vector<cv::Point> pts;
+				int x;
+				int y;
+				auto px_delta = px_size / xd;
+				auto py_delta = py_size / yd;
 				for (int i = 0; i < values_.size(); i += 2)
 				{
-					int x = (int)((values_[i] - x_min) * x_delta);
-					int y = (int)((values_[i + 1] - y_min) * y_delta);
+					x = (int)(px_start + (values_[i] - x_min) * px_delta);
+					y = (int)(py_start + (values_[i + 1] - y_min) * py_delta);
 					pts.push_back({ x,h - y });
 				}
 				int r = (marker_size_.width + marker_size_.height);
 				r = (r > 2 && r < 32) ? r : 4;
 				
-				if (chart_type_ == chart::Line)
+				if (chart_type_ == chart::Trends || chart_type_ == chart::Line)
 				{
 					DrawMarkers_(target, pts, marker_type_, render_color_.Cut(64), r, 2);
 					cv::polylines(target, pts, false, cr, 1, cv::LINE_AA);
@@ -631,28 +628,23 @@ namespace cvplot
 				int h = target.rows;
 				std::vector<cv::Point> pts;
 				std::vector<Color> colors;
-				auto min = values_[2];
-				auto max = values_[2];
+
+				auto px_delta = px_size / xd;
+				auto py_delta = py_size / yd;
+				int x;
+				int y;
 				for (int i = 0; i < values_.size(); i += 3)
 				{
-					int x = (int)((values_[i] - x_min) * x_delta);
-					int y = (int)((values_[i + 1] - y_min) * y_delta);
-					if (values_[i + 2] > max)
-					{
-						max = values_[i + 2];
-					}
-					else if (values_[i + 2] < min)
-					{
-						min = values_[i + 2];
-					}
+					x = (int)(px_start + (values_[i] - x_min) * px_delta);
+					y = (int)(py_start + (values_[i + 1] - y_min) * py_delta);
 					pts.push_back({ x,h - y });
 				}
-				if (max > min)
+				if (z_max > z_min)
 				{
-					double factor = 1.0 / (max - min);
+					double factor = 1.0 / (z_max - z_min);
 					for (int i = 0; i < values_.size(); i += 3)
 					{
-						auto z = (values_[i + 2] - min) * factor;
+						auto z = (values_[i + 2] - z_min) * factor;
 						colors.push_back(render_color_.Linear(z));
 					}
 				}
@@ -661,8 +653,8 @@ namespace cvplot
 					colors.resize(pts.size(), color::Transparent);
 				}
 
-				auto block_width = (int)(x_delta);
-				auto block_height = (int)(y_delta);
+				auto block_width = (int)(px_delta);
+				auto block_height = (int)(py_delta);
 				for (int i = 0; i < pts.size(); ++i)
 				{
 					cv::Rect rect({ pts[i].x - block_width / 2,pts[i].y - block_height / 2,block_width,block_height });
@@ -959,8 +951,6 @@ namespace cvplot
 				//erase view with background
 				//buffer_.setTo(background_color_.ToScalar());
 				
-				//cv::rectangle(buffer_, { 0, 0 }, { size_.width - 1, size_.height - 1 }, color::Black.ToScalar(), 1, cv::LINE_AA);
-
 				//draw y label
 				if (!ylabel_.empty())
 				{
@@ -970,7 +960,7 @@ namespace cvplot
 					int sq_size = size_.width < size_.height ? size_.width : size_.height;
 					cv::Rect rect(0, size_.height / 2 + vertical_margin_ - sq_size / 2, sq_size, sq_size);
 					auto mat = buffer_(rect);
-					cv::Point pt(sq_size / 2 - fsize.width / 2, horizontal_margin_ - fsize.height + 5);
+					cv::Point pt(sq_size / 2 - fsize.width / 2, horizontal_margin_ - fsize.height);
 					cv::putText(mat, ylabel_, pt, fface, 1.0, text_color_.ToScalar(), 2, cv::LINE_AA);
 					auto rm = cv::getRotationMatrix2D({ sq_size / 2.0f,sq_size / 2.0f }, 90, 1.0);
 					cv::warpAffine(mat, mat, rm, { sq_size, sq_size },cv::WARP_FILL_OUTLIERS, cv::BORDER_TRANSPARENT, color::Transparent.ToScalar());
@@ -981,14 +971,26 @@ namespace cvplot
 
 				double x_min = 0;
 				double x_max = 1;
-				double x_delta = 1;
 				double y_min = 0;
 				double y_max = 1;
-				double y_delta = 1;
+				double z_min = 0;
+				double z_max = 0;
 
-				int dim = series_map_.begin()->second.GetDimension();
+				int sample_count = 0;
+				for (auto s : series_map_)
+				{
+					auto count1 = s.second.GetSampleCount();
+					if (count1 > sample_count)
+					{
+						sample_count = count1;
+					}
+				}
+
+				auto series_0 = series_map_.begin()->second;
+				int dim = series_0.GetDimension();
 				std::vector<double> mins(dim, DBL_MAX);
 				std::vector<double> maxs(dim, DBL_MIN);
+				
 				for (auto s : series_map_)
 				{
 					auto mins1 = s.second.GetMin();
@@ -1010,23 +1012,13 @@ namespace cvplot
 				{
 				case 1:
 				{
-					int count = 0;
-					for (auto s : series_map_)
-					{
-						auto count1 = s.second.GetCount();
-						if (count1 > count)
-						{
-							count = count1;
-						}
-					}
-					x_min = 0.0;
-					x_max = 2.2 * (count + 1);
+					x_min = 1.0;
+					x_max = sample_count;
 					y_min = mins[0];
 					y_max = maxs[0];
 				}
 				break;
 				case 2:
-				case 3:
 				{
 					x_min = mins[0];
 					x_max = maxs[0];
@@ -1034,72 +1026,96 @@ namespace cvplot
 					y_max = maxs[1];
 				}
 				break;
+				case 3:
+				{
+					x_min = mins[0];
+					x_max = maxs[0];
+					y_min = mins[1];
+					y_max = maxs[1];
+					z_min = mins[2];
+					z_max = maxs[2];
+				}
+				break;
 				default:
 					break;
 				}
 
-				x_delta = 0.8125 * size_.width / (x_max - x_min);
-				y_delta = 0.8125 * size_.height / (y_max - y_min);
-				x_min = (19.0 * x_min - x_max) / 20.0;
-				x_max = (19.0 * x_max - x_min) / 20.0;
-				y_min = (19.0 * y_min - y_max) / 20.0;
-				y_max = (19.0 * y_max - y_min) / 20.0;
+				double par = 0.8125;
+				double pad = (1 - par) / 2;
+				double px_start = pad * size_.width;
+				double py_start = pad * size_.height;
+				double px_size = par * size_.width;
+				double py_size = par * size_.height;
 
 				//draw axis grids
 				if (enable_grid_ && dim == 2)
 				{
 					auto gridLineColor = grid_color_.ToScalar();
+					auto fface = cv::FONT_HERSHEY_SIMPLEX;
+					int fbase;
 
-					int n_rows = target.rows / y_delta + 1;
-					for (auto i = 0; i < n_rows; ++i)
+					const int GRID_BLOCK_WIDTH = 100;
+					const int GRID_BLOCK_HEIGHT = 100;
+					int n_rows = target.rows / GRID_BLOCK_HEIGHT + 1;
+					int n_cols = target.cols / GRID_BLOCK_WIDTH + 1;
+
+					auto xd = (x_max - x_min) / n_cols;
+					auto yd = (y_max - y_min) / n_rows;
+					auto px_delta = px_size / n_cols;
+					auto py_delta = py_size / n_rows;
+					int x;
+					int y;
+
+					x = (int)px_start;
+					y = size_.height + vertical_margin_;
+					for (auto v = x_min; v < x_max + xd; v += xd)
 					{
-						auto y = (int)(i * y_delta);
-						cv::line(target, { 1, buffer_.rows - y }, { buffer_.cols - 1, buffer_.rows - y }, gridLineColor, 1, cv::LINE_4);
+						std::ostringstream out;
+						out << std::setprecision(4) << v;
+						auto str = out.str();
+						cv::Size fsize = getTextSize(str, fface, 0.5, 1, &fbase);
+						cv::line(target, { x, 1 }, { x, size_.height - fsize.height }, gridLineColor, 1, cv::LINE_4);
+						cv::Point org(x + horizontal_margin_ - fsize.width / 2, y);
+						cv::putText(buffer_, str, org, fface, 0.5, text_color_.ToScalar(), 1);
+						x += px_delta;
 					}
 
-					int n_cols = target.cols / x_delta + 1;
-					for (auto i = 0; i < n_cols; ++i)
+					x = horizontal_margin_;
+					y = size_.height - py_start;
+					for (auto v = y_min; v < y_max + yd; v += yd)
 					{
-						auto x = (int)(i * x_delta);
-						cv::line(target, { x, 1 }, { x, buffer_.rows - 1 }, gridLineColor, 1, cv::LINE_4);
+						std::ostringstream out;
+						out << std::setprecision(4) << v;
+						auto str = out.str();
+						cv::Size fsize = getTextSize(str, fface, 0.5, 1, &fbase);
+						cv::line(target, { fsize.width, y }, { size_.width - 1, y }, gridLineColor, 1, cv::LINE_4);
+						cv::Point org(x, y + vertical_margin_ + fsize.height / 2);
+						cv::putText(buffer_, str, org, fface, 0.5, text_color_.ToScalar(), 1);
+						y -= py_delta;
 					}
-				}
-				
-				int ci;
+				}			
 
 				//draw series
-				int index = 0;
-				int division = series_map_.size() + 1;
-				ci = 10;
+				int division = 0;
 				for (auto s : series_map_)
 				{
-					s.second.Draw(target, index, division, x_min, x_max, x_delta, y_min, y_max, y_delta);
-					++index;
-					ci = (ci + 30) % 256;
-					if (s.second.GetDimension() == 3)
+					if (s.second.GetChartType() == chart::Bar)
 					{
-						auto render_color = s.second.GetRenderColor();
-						cv::Rect rect(size_.width + horizontal_margin_, vertical_margin_, 20, size_.height);
-						cv::Mat mat({ 20, 256 }, CV_8UC4);
-						for (int i = 0; i < 256; ++i)
-						{
-							for (int j = 0; j < 20; ++j)
-							{
-								auto color = color::Remap(render_color.Linear((256 - i) / 256.0).ToScalar());
-								mat.at<cv::Vec4b>(i, j) = color.ToScalar();
-							}
-						}
-						cv::Mat tmp(rect.size(), CV_8UC4);
-						cv::resize(mat, tmp, { tmp.cols,tmp.rows });
-						tmp.copyTo(buffer_(rect));
+						++division;
 					}
+				}				
+				int index = 0;
+				for (auto s : series_map_)
+				{
+					s.second.Draw(target, index, division, x_min, x_max, y_min, y_max, z_min, z_max, px_start, py_start, px_size, py_size);
+					++index;					
 				}
 
 				//draw legend
 				int legend_size = 6;
 				int legend_x = size_.width + horizontal_margin_;
 				int legend_y = vertical_margin_ + 20;
-				ci = 10;
+				int ci = 256 / (series_map_.size() + 1);
 				for (auto s : series_map_)
 				{
 					if (s.second.IsLegendEnabled())
@@ -1147,9 +1163,46 @@ namespace cvplot
 								break;
 							}
 						}
-						ci = (ci + 30) % 256;
+						ci = (ci << 1) % 256;
 						legend_y += 2 * fsize.height;
 					}
+				}
+
+				//draw color bar
+				if (series_0.GetChartType() == chart::Elevation)
+				{
+					auto render_color = series_0.GetRenderColor();
+					int bar_width = 20;
+					int bar_margin = 20;
+					const int N_COLORS = 256;
+					cv::Rect rect(size_.width + horizontal_margin_ + bar_margin, vertical_margin_ + bar_margin, bar_width, size_.height - 2 * bar_margin);
+					cv::Mat mat({ bar_width, N_COLORS }, CV_8UC4);
+					for (int i = 0; i < N_COLORS; ++i)
+					{
+						for (int j = 0; j < bar_width; ++j)
+						{
+							auto color = render_color.Linear((N_COLORS - i) / (double)N_COLORS);
+							mat.at<cv::Vec4b>(i, j) = color.ToScalar();
+						}
+					}
+					cv::Mat tmp(rect.size(), CV_8UC4);
+					cv::resize(mat, tmp, { tmp.cols,tmp.rows });
+					tmp.copyTo(buffer_(rect));
+
+					auto fface = cv::FONT_HERSHEY_SIMPLEX;
+					int fbase;
+
+					char sz1[16] = { 0 };
+					sprintf_s(sz1, "%g", z_min);
+					auto fsize1 = cv::getTextSize(sz1, fface, 0.5, 1, &fbase);
+					cv::Point pt1(rect.x + bar_width / 2 - fsize1.width / 2, rect.y + rect.height + bar_margin);
+					cv::putText(buffer_, sz1, pt1, fface, 0.5, color::Black.ToScalar(), 1, cv::LINE_AA);
+
+					char sz2[16] = { 0 };
+					sprintf_s(sz2, "%g", z_max);
+					auto fsize2 = cv::getTextSize(sz2, fface, 0.5, 1, &fbase);
+					cv::Point pt2(rect.x + bar_width / 2 - fsize2.width / 2, rect.y - fsize2.height - fbase);
+					cv::putText(buffer_, sz2, pt2, fface, 0.5, render_color.ToScalar(), 1, cv::LINE_AA);
 				}
 
 				//draw title
