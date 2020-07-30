@@ -4,7 +4,6 @@ Yet another cvplot, draw charts (like bar, scatter, line, etc) with OpenCV.
 Easy to use (one header file ONLY).
 
 
-
 [TOC]
 
 ## Supported chart types ##
@@ -14,7 +13,6 @@ Easy to use (one header file ONLY).
 - Line
 - Scatter
 - Elevation
-
 
 
 ## Supported features ##
@@ -31,7 +29,6 @@ Easy to use (one header file ONLY).
 - Different markers
 - Axis grid
 - **Dump & load with file**  (just like `serialization/ deserialization`)
-
 
 
 ## Usage ##
@@ -53,7 +50,6 @@ int main()
 ```
 
 
-
 ## Screenshots ##
 
 One **figure** with layout '1-by-3' (sub-plots) is shown as below.
@@ -61,15 +57,12 @@ One **figure** with layout '1-by-3' (sub-plots) is shown as below.
 ![screenshot](imgs/figure.png)
 
 
-
 **Sub-plots** can also be saved as images, see below.
 
 ![fig-1-1](imgs/figure[01-01].png)
 
 
-
 ![fig-1-2](imgs/figure[01-02].png)
-
 
 
 ![fig-1-3](imgs/figure[01-03].png)
