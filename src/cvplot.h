@@ -667,6 +667,100 @@ namespace cvplot
 			}
 		}
 
+		void Dump(const std::string filename)
+		{
+			FILE* fp = nullptr;
+			fopen_s(&fp, filename.c_str(), "w");
+			if (fp)
+			{
+				fprintf_s(fp, "%s\n", label_.c_str());
+				fprintf_s(fp, "%d\n", chart_type_);
+				fprintf_s(fp, "%d\n", marker_type_);
+				fprintf_s(fp, "%d %d\n", marker_size_.width, marker_size_.height);
+				fprintf_s(fp, "%d\n", dimension_);
+				fprintf_s(fp, "%d\n", enable_legend_ ? 1 : 0);
+				auto vec4 = render_color_.ToVec4b(); //BGRA
+				fprintf_s(fp, "%d %d %d %d\n", vec4[0], vec4[1], vec4[2], vec4[3]);
+				for (auto v : maxs_)
+				{
+					fprintf_s(fp, "%lf ", v);
+				}
+				for (auto v : mins_)
+				{
+					fprintf_s(fp, "%lf ", v);
+				}
+				int n = values_.size();
+				fprintf_s(fp, "\n%d\n", n);
+				int counter = 0;
+				for (auto v : values_)
+				{
+					fprintf_s(fp, "%lf ", v);
+					if (++counter % 32 == 0)
+					{
+						fprintf_s(fp, "\n");
+					}
+				}
+				fprintf_s(fp, "\n");
+			}
+			fclose(fp);
+		}
+
+		Series& Load(const std::string filename)
+		{
+			FILE* fp = nullptr;
+			fopen_s(&fp, filename.c_str(), "r");
+			if (fp == nullptr)
+			{
+				throw std::exception("failed to load series");
+			}
+
+			const int LEN = 256;
+			char sz[LEN] = { 0 };
+			fscanf_s(fp, "%s\n", sz, LEN);
+			label_ = sz;
+			fscanf_s(fp, "%d\n", &chart_type_);
+			fscanf_s(fp, "%d\n", &marker_type_);
+			fscanf_s(fp, "%d %d\n", &(marker_size_.width), &(marker_size_.height));
+			fscanf_s(fp, "%d\n", &dimension_);
+			int enable;
+			fscanf_s(fp, "%d\n", &enable);
+			enable_legend_ = enable > 0;
+			int b, g, r, a;
+			fscanf_s(fp, "%d %d %d %d\n", &b, &g, &r, &a);
+			auto color = Color(r, g, b, a);
+			render_color_ = color;
+			maxs_.resize(dimension_);
+			mins_.resize(dimension_);
+			for (int i = 0; i < dimension_; ++i)
+			{
+				double v;
+				fscanf_s(fp, "%lf", &v);
+				maxs_[i] = v;
+			}
+			for (int i = 0; i < dimension_; ++i)
+			{
+				double v;
+				fscanf_s(fp, "%lf", &v);
+				mins_[i] = v;
+			}
+			int n;
+			fscanf_s(fp, "%d\n", &n);
+			if (n > 0)
+			{
+				values_.resize(n);
+				for (int i = 0; i < n; ++i)
+				{
+					double v;
+					fscanf_s(fp, "%lf", &v);
+					values_[i] = v;
+				}
+			}
+
+			fclose(fp);
+
+			return *this;
+		}
+
     private:
 		void DrawMarkers_(cv::Mat target, std::vector<cv::Point> pts, marker::Type type, Color color, int size, int thickness)
 		{
@@ -1266,8 +1360,93 @@ namespace cvplot
 			return buffer_.clone();
 		}
 
+		void Dump(const std::string& prefix)
+		{
+			FILE* fp = nullptr;
+			fopen_s(&fp, (prefix + ".000000000.vdp").c_str(), "w");
+			if (fp)
+			{
+				fprintf_s(fp, "%s\n", title_.c_str());
+				fprintf_s(fp, "%d %d\n", size_.width, size_.height);
+				fprintf_s(fp, "%s\n", xlabel_.c_str());
+				fprintf_s(fp, "%s\n", ylabel_.c_str());
+				auto vec4 = background_color_.ToVec4b();
+				fprintf_s(fp, "%d %d %d %d\n", vec4[0], vec4[1], vec4[2], vec4[3]);
+				vec4 = text_color_.ToVec4b();
+				fprintf_s(fp, "%d %d %d %d\n", vec4[0], vec4[1], vec4[2], vec4[3]);
+				vec4 = grid_color_.ToVec4b();
+				fprintf_s(fp, "%d %d %d %d\n", vec4[0], vec4[1], vec4[2], vec4[3]);
+				fprintf_s(fp, "%d\n", enable_grid_ ? 1 : 0);
+				fprintf_s(fp, "%d %d\n", horizontal_margin_, vertical_margin_);
+				int n = series_map_.size();
+				fprintf_s(fp, "%d\n", n);
+				int index = 0;
+				for (auto s : series_map_)
+				{
+					char sz[32] = { 0 };
+					sprintf_s(sz, ".%09d.sdp", ++index);
+					auto filename = prefix + sz;
+					s.second.Dump(filename);
+					fprintf_s(fp, "%s\n", filename.c_str());
+				}
+				fclose(fp);
+			}
+		}
+
+		View& Load(const std::string prefix)
+		{
+			FILE* fp = nullptr;
+			fopen_s(&fp, (prefix + ".000000000.vdp").c_str(), "r");
+			if (fp)
+			{
+				const int LEN = 256;
+				char sz[LEN] = { 0 };
+				fscanf_s(fp, "%s\n", sz, LEN);
+				title_ = sz;
+				int w;
+				int h;
+				fscanf_s(fp, "%d %d\n", &w, &h);
+				SetSize({ w,h });
+				char sz1[LEN] = { 0 };
+				fscanf_s(fp, "%s\n", sz1, LEN);
+				xlabel_ = sz1;
+				char sz2[LEN] = { 0 };
+				fscanf_s(fp, "%s\n", sz2, LEN);
+				ylabel_ = sz2;
+				int r, g, b, a;
+				fscanf_s(fp, "%d %d %d %d\n", &b, &g, &r, &a);
+				auto color1 = Color(r, g, b, a);
+				background_color_ = color1;
+				fscanf_s(fp, "%d %d %d %d\n", &b, &g, &r, &a);
+				auto color2 = Color(r, g, b, a);
+				text_color_ = color2;
+				fscanf_s(fp, "%d %d %d %d\n", &b, &g, &r, &a);
+				auto color3 = Color(r, g, b, a);
+				grid_color_ = color3;
+				int enable;
+				fscanf_s(fp, "%d\n", &enable);
+				enable_grid_ = enable > 0;
+				fscanf_s(fp, "%d %d\n", &horizontal_margin_, &vertical_margin_);
+				int n;
+				fscanf_s(fp, "%d\n", &n);
+				Clear();
+				for (int i = 0; i < n; ++i)
+				{
+					char szf[LEN] = { 0 };
+					fscanf_s(fp, "%s\n", szf, LEN);
+					Series s("", chart::Line);
+					s.Load(szf);
+					AddSeries(s);
+				}
+				fclose(fp);
+				return *this;
+			}
+
+			throw std::exception("failed to load view");
+		}
+
 	private:
-		static double CalcSnap(double value)
+		static double CalcSnap_(double value)
 		{
 			auto v1 = pow(10, floor(log10(value)));
 			auto v2 = pow(10, floor(log10(value / 2))) * 2;
@@ -1409,6 +1588,68 @@ namespace cvplot
 			{
 
 			}
+		}
+
+		void Dump(const std::string& folder, const std::string alias)
+		{
+			FILE* fp = nullptr;
+			fopen_s(&fp, (folder + alias + ".00000000000000.fdp").c_str(), "w");
+			if (fp)
+			{
+				fprintf_s(fp, "%s\n", figure_name_.c_str());
+				fprintf_s(fp, "%d %d\n", vertical_count_, horizontal_count_);
+				fprintf_s(fp, "%d %d\n", figure_size_.width, figure_size_.height);
+				fprintf_s(fp, "%d %d\n", horizontal_margin_, vertical_margin_);
+				for (int i = 1; i <= vertical_count_; ++i)
+				{
+					for (int j = 1; j <= horizontal_count_; ++j)
+					{
+						auto v = SelectView(i, j);
+						char sz[32] = { 0 };
+						sprintf_s(sz, ".%02d-%02d", i, j);
+						auto prefix = folder + alias + sz;
+						v.Dump(prefix);
+						fprintf_s(fp, "%s\n", prefix.c_str());
+					}
+				}
+				fclose(fp);
+			}
+		}
+
+		void Load(const std::string& folder, const std::string alias)
+		{
+			FILE* fp = nullptr;
+			fopen_s(&fp, (folder + alias + ".00000000000000.fdp").c_str(), "r");
+			if (fp == nullptr)
+			{
+				throw std::exception("load figure failed");
+			}
+
+			const int LEN = 256;
+			char sz[LEN] = { 0 };
+			fscanf_s(fp, "%s\n", sz, LEN);
+			figure_name_ = sz;
+			int rows;
+			int cols;
+			fscanf_s(fp, "%d %d\n", &rows, &cols);
+			SetLayout(rows, cols);
+			fscanf_s(fp, "%d %d\n", &cols, &rows);
+			SetSize({ cols,rows });
+			fscanf_s(fp, "%d %d\n", &horizontal_margin_, &vertical_margin_);
+			for (int i = 1; i <= vertical_count_; ++i)
+			{
+				for (int j = 1; j <= horizontal_count_; ++j)
+				{
+					View v;
+					char sz[32] = { 0 };
+					sprintf_s(sz, ".%02d-%02d", i, j);
+					auto prefix = folder + alias + sz;
+					v.Load(prefix);
+					SetView(v, i, j);
+					SelectView(i, j).Invalidate();
+				}
+			}
+			fclose(fp);
 		}
 
 	private:

@@ -20,6 +20,14 @@ int main()
 		.SetRenderColor(cvplot::color::DarkOrange)
 		.AddValues({ 2,32,5,9,7,12,10,1,13,5,19,11,25,2,27,3,32,10 });
 
+	const int N = 100000;
+	for (int i = 0; i < N; ++i)
+	{
+		auto x = 20.0 * (N / 2 - i + 1) / N;
+		auto y = x * x;
+		s2.AddValues({ x,y });
+	}
+
 	auto s3 = cvplot::Series("series-3", cvplot::chart::Scatter, cvplot::marker::Diamond)
 		.SetRenderColor(cvplot::color::Red)
 		.AddValues({ 2,2,5,9,7,12,10,1 })
@@ -62,6 +70,12 @@ int main()
 		.SetView(v2, 1, 2)
 		.SetView(v3, 1, 3);
 
-	f.Show();
-	f.Save("figure.png");
+	//f.Show();
+	//f.Save("figure.png");
+	f.Dump("dump\\", "fig1");
+
+	cvplot::Figure f2;
+	f2.Load("dump\\", "fig1");
+	f2.Show();
+	f2.Save("figure.png", true);
 }
