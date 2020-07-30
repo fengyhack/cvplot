@@ -1,4 +1,5 @@
 #include "cvplot.h"
+#include <direct.h>
 
 int main()
 {
@@ -16,11 +17,11 @@ int main()
 		.SetRenderColor(cvplot::color::Blue)
 		.AddValues({ 3,0,5,8,2,3,6 });
 
-	auto s2 = cvplot::Series("series-2", cvplot::chart::Line, cvplot::marker::Circle)
+	auto s2 = cvplot::Series("series-2", cvplot::chart::Line)
 		.SetRenderColor(cvplot::color::DarkOrange)
 		.AddValues({ 2,32,5,9,7,12,10,1,13,5,19,11,25,2,27,3,32,10 });
 
-	const int N = 100000;
+	const int N = 10000;
 	for (int i = 0; i < N; ++i)
 	{
 		auto x = 20.0 * (N / 2 - i + 1) / N;
@@ -30,11 +31,17 @@ int main()
 
 	auto s3 = cvplot::Series("series-3", cvplot::chart::Scatter, cvplot::marker::Diamond)
 		.SetRenderColor(cvplot::color::Red)
-		.AddValues({ 2,2,5,9,7,12,10,1 })
+		.AddValues({ 12,2,5,25,-7,12,15,1 })
 		.AddValues({ 6,2 });
 
-	auto s4 = cvplot::Series("series-4", cvplot::chart::Elevation)
-		.AddValues({ 1,5,25,2,3,58,3,4,180,5,2,80,3,8,100,8,1,200 });
+	auto s4 = cvplot::Series("series-4", cvplot::chart::Elevation);
+	for (int i = 0; i < 8; ++i)
+	{
+		for (int j = 0; j < 5; ++j)
+		{
+			s4.AddValues({ (double)i,(double)j,(double)(100 - (i + 1) * j * j) });
+		}
+	}
 
 	auto v1 = cvplot::View()
 		.SetTitle("v-1-1")
@@ -51,6 +58,7 @@ int main()
 		.SetSize({ 600, 600 })
 		.SetXLabel("test-2x")
 		.SetYLabel("test-2y")
+		.SetTextColor(cvplot::color::Blue)
 		.EnableGrid(true)
 		.SetGridColor(cvplot::color::LightGray)
 		.AddSeries(s2)
@@ -58,9 +66,10 @@ int main()
 
 	auto v3 = cvplot::View()
 		.SetTitle("v-1-3")
-		.SetSize({ 600, 600 })
 		.SetXLabel("test-3x")
 		.SetYLabel("test-3y")
+		.SetSize({ 800, 600 })
+		.SetTextColor(cvplot::color::OrangeRed)
 		.AddSeries(s4);
 
 	auto f = cvplot::Figure()
@@ -72,6 +81,8 @@ int main()
 
 	//f.Show();
 	//f.Save("figure.png");
+	_mkdir("dump\\");
+
 	f.Dump("dump\\", "fig1");
 
 	cvplot::Figure f2;

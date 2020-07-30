@@ -80,6 +80,11 @@ namespace cvplot
 			return Color(r, g, b, a_);
 		}
 
+		Color Reverse() const
+		{
+			return Color(255 - r_, 255 - g_, 255 - b_, a_);
+		}
+
 		Color Lift(byte v)
 		{
 			int r = r_ > v ? r_ : v;
@@ -628,6 +633,7 @@ namespace cvplot
 				int h = target.rows;
 				std::vector<cv::Point> pts;
 				std::vector<Color> colors;
+				std::vector<double> zs;
 
 				auto px_delta = px_size / xd;
 				auto py_delta = py_size / yd;
@@ -646,6 +652,7 @@ namespace cvplot
 					{
 						auto z = (values_[i + 2] - z_min) * factor;
 						colors.push_back(render_color_.Linear(z));
+						zs.push_back(values_[i + 2]);
 					}
 				}
 				else
@@ -655,10 +662,17 @@ namespace cvplot
 
 				auto block_width = (int)(px_delta);
 				auto block_height = (int)(py_delta);
+				cv::Size fsize;
+				auto fface = cv::FONT_HERSHEY_COMPLEX_SMALL;
+				int fbase;
 				for (int i = 0; i < pts.size(); ++i)
 				{
-					cv::Rect rect({ pts[i].x - block_width / 2,pts[i].y - block_height / 2,block_width,block_height });
+					cv::Rect rect({ pts[i].x - block_width / 2 + 1,pts[i].y - block_height / 2 + 1,block_width - 2,block_height - 2 });
 					cv::rectangle(target, rect, colors[i].ToScalar(), -1);
+					char sz[32] = { 0 };
+					sprintf_s(sz, "%g", zs[i]);
+					fsize = cv::getTextSize(sz, fface, 1.0, 1, &fbase);
+					cv::putText(target, sz, { pts[i].x - fsize.width / 2,pts[i].y + fsize.height / 2 }, fface, 1.0, colors[i].Reverse().ToScalar(), 1, cv::LINE_AA);
 				}
 			}
 			break;
@@ -897,6 +911,12 @@ namespace cvplot
 		{
 			if (size_ != size)
 			{
+				if (size.width < 400 || size.height < 400)
+				{
+					size.width = std::max({ size.width, 400 });
+					size.height = std::max({ size.height, 400 });
+				}
+
 				cv::Size visual_size(size.width + 2 * horizontal_margin_, size.height + 2 * vertical_margin_);
 				if (buffer_.empty())
 				{
@@ -1045,17 +1065,26 @@ namespace cvplot
 				//erase view with background
 				//buffer_.setTo(background_color_.ToScalar());
 				
+				double pad = 60.0 / (std::max(size_.width, size_.height));
+				double par = 1.0 - 2 * pad;
+				double px_start = pad * size_.width;
+				double py_start = pad * size_.height;
+				double px_size = par * size_.width;
+				double py_size = par * size_.height;
+
 				//draw y label
 				if (!ylabel_.empty())
 				{
 					auto fface = cv::FONT_HERSHEY_TRIPLEX;
 					int fbase;
-					auto fsize = cv::getTextSize(ylabel_, fface, 1.0, 2, &fbase);
+					auto fscale = 1.0;
+					auto fsize = cv::getTextSize(ylabel_, fface, fscale, 2, &fbase);
 					int sq_size = size_.width < size_.height ? size_.width : size_.height;
 					cv::Rect rect(0, size_.height / 2 + vertical_margin_ - sq_size / 2, sq_size, sq_size);
 					auto mat = buffer_(rect);
-					cv::Point pt(sq_size / 2 - fsize.width / 2, horizontal_margin_ - fsize.height);
-					cv::putText(mat, ylabel_, pt, fface, 1.0, text_color_.ToScalar(), 2, cv::LINE_AA);
+					int offset = sq_size > 800 ? (int)(pad * sq_size / 8) : (int)(pad * sq_size / 16);
+					cv::Point pt(sq_size / 2 - fsize.width / 2, horizontal_margin_ + offset - fsize.height);
+					cv::putText(mat, ylabel_, pt, fface, fscale, text_color_.ToScalar(), 2, cv::LINE_AA);
 					auto rm = cv::getRotationMatrix2D({ sq_size / 2.0f,sq_size / 2.0f }, 90, 1.0);
 					cv::warpAffine(mat, mat, rm, { sq_size, sq_size },cv::WARP_FILL_OUTLIERS, cv::BORDER_TRANSPARENT, color::Transparent.ToScalar());
 				}
@@ -1133,13 +1162,6 @@ namespace cvplot
 				default:
 					break;
 				}
-
-				double par = 0.8125;
-				double pad = (1 - par) / 2;
-				double px_start = pad * size_.width;
-				double py_start = pad * size_.height;
-				double px_size = par * size_.width;
-				double py_size = par * size_.height;
 
 				//draw axis grids
 				if (enable_grid_ && dim == 2)
@@ -1269,8 +1291,8 @@ namespace cvplot
 					int bar_width = 20;
 					int bar_margin = 20;
 					const int N_COLORS = 256;
-					cv::Rect rect(size_.width + horizontal_margin_ + bar_margin, vertical_margin_ + bar_margin, bar_width, size_.height - 2 * bar_margin);
-					cv::Mat mat({ bar_width, N_COLORS }, CV_8UC4);
+					cv::Rect rect(size_.width + horizontal_margin_ + par * bar_margin, vertical_margin_ + bar_margin, bar_width, size_.height - 2 * bar_margin);
+					cv::Mat mat(N_COLORS, bar_width, CV_8UC4);
 					for (int i = 0; i < N_COLORS; ++i)
 					{
 						for (int j = 0; j < bar_width; ++j)
@@ -1285,18 +1307,19 @@ namespace cvplot
 
 					auto fface = cv::FONT_HERSHEY_SIMPLEX;
 					int fbase;
+					auto fsacle = 0.5;
 
 					char sz1[16] = { 0 };
 					sprintf_s(sz1, "%g", z_min);
-					auto fsize1 = cv::getTextSize(sz1, fface, 0.5, 1, &fbase);
-					cv::Point pt1(rect.x + bar_width / 2 - fsize1.width / 2, rect.y + rect.height + bar_margin);
-					cv::putText(buffer_, sz1, pt1, fface, 0.5, color::Black.ToScalar(), 1, cv::LINE_AA);
+					auto fsize1 = cv::getTextSize(sz1, fface, fsacle, 1, &fbase);
+					cv::Point pt1(rect.x + bar_width / 2 - 3 * fsize1.width / 4, rect.y + rect.height + bar_margin + 5);
+					cv::putText(buffer_, sz1, pt1, fface, fsacle, color::Black.ToScalar(), 1, cv::LINE_AA);
 
 					char sz2[16] = { 0 };
 					sprintf_s(sz2, "%g", z_max);
-					auto fsize2 = cv::getTextSize(sz2, fface, 0.5, 1, &fbase);
-					cv::Point pt2(rect.x + bar_width / 2 - fsize2.width / 2, rect.y - fsize2.height - fbase);
-					cv::putText(buffer_, sz2, pt2, fface, 0.5, render_color.ToScalar(), 1, cv::LINE_AA);
+					auto fsize2 = cv::getTextSize(sz2, fface, fsacle, 1, &fbase);
+					cv::Point pt2(rect.x + bar_width / 2 - 3 * fsize2.width / 4, rect.y - fsize2.height - fbase);
+					cv::putText(buffer_, sz2, pt2, fface, fsacle, render_color.ToScalar(), 1, cv::LINE_AA);
 				}
 
 				//draw title
