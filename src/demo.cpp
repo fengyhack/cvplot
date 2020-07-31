@@ -1,6 +1,10 @@
 #include "cvplot.h"
 #include <direct.h>
 
+void create_directory(const std::string dir);
+
+void build_figure(const std::string folder, const std::string alias);
+
 int main()
 {
 	auto s1 = cvplot::Series("series-1", cvplot::chart::Bar)
@@ -81,12 +85,58 @@ int main()
 
 	//f.Show();
 	//f.Save("figure.png");
-	_mkdir("dump\\");
-
+	create_directory("dump\\");
 	f.Dump("dump\\", "fig1");
+	
+	build_figure("dump\\", "fig1");
+}
 
-	cvplot::Figure f2;
-	f2.Load("dump\\", "fig1");
-	f2.Show();
-	f2.Save("figure.png", true);
+
+void create_directory(const std::string dir)
+{
+	if (dir.empty())
+	{
+		return;
+	}
+
+	auto pos = dir.find_first_of(':');
+	if (pos == dir.npos)
+	{
+		pos = 0;
+	}
+	else
+	{
+		pos += 1;
+	}
+
+	pos = dir.find('\\', pos + 1);
+	if (pos == dir.npos)
+	{
+		pos = dir.find('/', pos + 1);
+	}
+
+	if (pos == dir.npos)
+	{
+		_mkdir(dir.c_str());
+		return;
+	}
+
+	do
+	{
+		auto s = dir.substr(0, pos);
+		_mkdir(s.c_str());
+		pos = dir.find('\\', pos + 1);
+		if (pos == dir.npos)
+		{
+			pos = dir.find('/', pos + 1);
+		}
+	} while (pos != dir.npos);
+}
+
+void build_figure(const std::string folder, const std::string alias)
+{
+	cvplot::Figure fig;
+	fig.Load(folder, alias);
+	fig.Show();
+	fig.Save(folder + alias + ".png");
 }
