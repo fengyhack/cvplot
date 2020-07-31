@@ -537,8 +537,8 @@ namespace cvplot
 				auto px_delta = px_size / xd;
 				auto py_delta = py_size / yd;
 				auto py_0 = py_delta > 10 ? 0.2 * py_delta : 2;
-				int x1 = (int)(px_start + px_delta * index / (division + 1));
-				int x2 = (int)(x1 + px_delta / (division + 1));
+				auto x1 = px_start + px_delta * index / (division + 1);
+				auto x2 = x1 + px_delta / (division + 1);
 				int y1 = 0;
 				int y2;
 				int h = target.rows;
@@ -550,11 +550,11 @@ namespace cvplot
 				for (auto v : values_)
 				{
 					y2 = (int)((v > y_min) ? (v - y_min) * py_delta : py_0);
-					cv::rectangle(target, { x1,h - y1 }, { x2,h - y2 }, cr, -1);
+					cv::rectangle(target, { (int)(x1+0.5),h - y1 }, { (int)(x2+0.5),h - y2 }, cr, -1);
 					char szText[16] = { 0 };
 					sprintf_s(szText, "%g", v);
 					fsize = cv::getTextSize(szText, fface, fscale, 1, &fbase);
-					cv::putText(target, szText, { (x1 + x2 - fsize.width) / 2,h - y2 - fbase }, fface, fscale, cr1, 1, cv::LINE_AA);
+					cv::putText(target, szText, { (int)((x1 + x2 - fsize.width + 0.5)) / 2,h - y2 - fbase }, fface, fscale, cr1, 1, cv::LINE_AA);
 					x1 += px_delta;
 					x2 += px_delta;
 				}
@@ -565,36 +565,40 @@ namespace cvplot
 				auto px_delta = px_size / xd;
 				auto py_delta = py_size / yd;
 				auto py_0 = py_delta > 10 ? 0.2 * py_delta : 2;
-				auto x_0 = (int)(px_start + 0.5 * division * px_delta / (division + 1.1));
-				int x = x_0;
+				auto x_0 = px_start + 0.5 * division * px_delta / (division + 1.1);
+				auto x = x_0;
 				int y;
 				int h = target.rows;
 				std::vector<cv::Point> pts;
 				for (auto v : values_)
 				{
 					y = (int)((v > y_min) ? (v - y_min) * py_delta : py_0);
-					pts.push_back({ x,h - y });
+					pts.push_back({ (int)(x + 0.5),h - y });
 					x += px_delta;
 				}
 				int r = (marker_size_.width + marker_size_.height);
 				r = (r > 2 && r < 32) ? r : 4;
-				DrawMarkers_(target, pts, marker_type_, render_color_.Cut(64), r, 2);
 				cv::polylines(target, pts, false, cr, 1, cv::LINE_AA);
 
-				auto cr1 = render_color_.Cut(90).ToScalar();
-				int fbase;
-				auto fface = cv::FONT_HERSHEY_SIMPLEX;
-				auto fscale = 0.8;
-				cv::Size fsize;
-				x = x_0;
-				for (auto v : values_)
+				if (marker_type_ != marker::None)
 				{
-					y = (int)((v > y_min) ? (v - y_min) * py_delta : py_0);
-					char szText[16] = { 0 };
-					sprintf_s(szText, "%g", v);
-					fsize = cv::getTextSize(szText, fface, fscale, 1, &fbase);
-					cv::putText(target, szText, { x - fsize.width / 2,h - y - fbase }, fface, fscale, cr1, 1, cv::LINE_AA);
-					x += px_delta;
+					DrawMarkers_(target, pts, marker_type_, render_color_.Cut(64), r, 2);
+
+					auto cr1 = render_color_.Cut(90).ToScalar();
+					int fbase;
+					auto fface = cv::FONT_HERSHEY_SIMPLEX;
+					auto fscale = 0.8;
+					cv::Size fsize;
+					x = x_0;
+					for (auto v : values_)
+					{
+						y = (int)((v > y_min) ? (v - y_min) * py_delta : py_0);
+						char szText[16] = { 0 };
+						sprintf_s(szText, "%g", v);
+						fsize = cv::getTextSize(szText, fface, fscale, 1, &fbase);
+						cv::putText(target, szText, { (int)(x + 0.5) - fsize.width / 2,h - y - fbase }, fface, fscale, cr1, 1, cv::LINE_AA);
+						x += px_delta;
+					}
 				}
 			}
 			break;
@@ -610,13 +614,13 @@ namespace cvplot
 				auto py_delta = py_size / yd;
 				for (int i = 0; i < values_.size(); i += 2)
 				{
-					x = (int)(px_start + (values_[i] - x_min) * px_delta);
-					y = (int)(py_start + (values_[i + 1] - y_min) * py_delta);
+					x = (int)(px_start + (values_[i] - x_min) * px_delta + 0.5);
+					y = (int)(py_start + (values_[i + 1] - y_min) * py_delta + 0.5);
 					pts.push_back({ x,h - y });
 				}
 				int r = (marker_size_.width + marker_size_.height);
 				r = (r > 2 && r < 32) ? r : 4;
-				
+
 				if (chart_type_ == chart::Trends || chart_type_ == chart::Line)
 				{
 					DrawMarkers_(target, pts, marker_type_, render_color_.Cut(64), r, 2);
@@ -641,8 +645,8 @@ namespace cvplot
 				int y;
 				for (int i = 0; i < values_.size(); i += 3)
 				{
-					x = (int)(px_start + (values_[i] - x_min) * px_delta);
-					y = (int)(py_start + (values_[i + 1] - y_min) * py_delta);
+					x = (int)(px_start + (values_[i] - x_min) * px_delta + 0.5);
+					y = (int)(py_start + (values_[i + 1] - y_min) * py_delta + 0.5);
 					pts.push_back({ x,h - y });
 				}
 				if (z_max > z_min)
@@ -687,7 +691,7 @@ namespace cvplot
 			fopen_s(&fp, filename.c_str(), "w");
 			if (fp)
 			{
-				fprintf_s(fp, "%s\n", label_.c_str());
+				fprintf_s(fp, "label=%s\n", label_.c_str());
 				fprintf_s(fp, "%d\n", chart_type_);
 				fprintf_s(fp, "%d\n", marker_type_);
 				fprintf_s(fp, "%d %d\n", marker_size_.width, marker_size_.height);
@@ -730,8 +734,8 @@ namespace cvplot
 
 			const int LEN = 256;
 			char sz[LEN] = { 0 };
-			fscanf_s(fp, "%s\n", sz, LEN);
-			label_ = sz;
+			fscanf_s(fp, "%[^\n]", sz, LEN);
+			label_ = std::string(sz).substr(6); //! cut "label="
 			fscanf_s(fp, "%d\n", &chart_type_);
 			fscanf_s(fp, "%d\n", &marker_type_);
 			fscanf_s(fp, "%d %d\n", &(marker_size_.width), &(marker_size_.height));
@@ -775,7 +779,7 @@ namespace cvplot
 			return *this;
 		}
 
-    private:
+	private:
 		void DrawMarkers_(cv::Mat target, std::vector<cv::Point> pts, marker::Type type, Color color, int size, int thickness)
 		{
 			cv::Scalar cr = color.ToScalar();
@@ -1064,7 +1068,7 @@ namespace cvplot
 			{
 				//erase view with background
 				//buffer_.setTo(background_color_.ToScalar());
-				
+
 				double pad = 60.0 / (std::max(size_.width, size_.height));
 				double par = 1.0 - 2 * pad;
 				double px_start = pad * size_.width;
@@ -1086,7 +1090,7 @@ namespace cvplot
 					cv::Point pt(sq_size / 2 - fsize.width / 2, horizontal_margin_ + offset - fsize.height);
 					cv::putText(mat, ylabel_, pt, fface, fscale, text_color_.ToScalar(), 2, cv::LINE_AA);
 					auto rm = cv::getRotationMatrix2D({ sq_size / 2.0f,sq_size / 2.0f }, 90, 1.0);
-					cv::warpAffine(mat, mat, rm, { sq_size, sq_size },cv::WARP_FILL_OUTLIERS, cv::BORDER_TRANSPARENT, color::Transparent.ToScalar());
+					cv::warpAffine(mat, mat, rm, { sq_size, sq_size }, cv::WARP_FILL_OUTLIERS, cv::BORDER_TRANSPARENT, color::Transparent.ToScalar());
 				}
 
 				cv::Rect roi(horizontal_margin_, vertical_margin_, size_.width, size_.height);
@@ -1113,7 +1117,7 @@ namespace cvplot
 				int dim = series_0.GetDimension();
 				std::vector<double> mins(dim, DBL_MAX);
 				std::vector<double> maxs(dim, DBL_MIN);
-				
+
 				for (auto s : series_map_)
 				{
 					auto mins1 = s.second.GetMin();
@@ -1209,7 +1213,7 @@ namespace cvplot
 						cv::putText(buffer_, str, org, fface, 0.5, text_color_.ToScalar(), 1);
 						y -= py_delta;
 					}
-				}			
+				}
 
 				//draw series
 				int division = 0;
@@ -1219,12 +1223,12 @@ namespace cvplot
 					{
 						++division;
 					}
-				}				
+				}
 				int index = 0;
 				for (auto s : series_map_)
 				{
 					s.second.Draw(target, index, division, x_min, x_max, y_min, y_max, z_min, z_max, px_start, py_start, px_size, py_size);
-					++index;					
+					++index;
 				}
 
 				//draw legend
@@ -1389,10 +1393,10 @@ namespace cvplot
 			fopen_s(&fp, (prefix + ".000000000.vdp").c_str(), "w");
 			if (fp)
 			{
-				fprintf_s(fp, "%s\n", title_.c_str());
+				fprintf_s(fp, "title=%s\n", title_.c_str());
 				fprintf_s(fp, "%d %d\n", size_.width, size_.height);
-				fprintf_s(fp, "%s\n", xlabel_.c_str());
-				fprintf_s(fp, "%s\n", ylabel_.c_str());
+				fprintf_s(fp, "xlabel=%s\n", xlabel_.c_str());
+				fprintf_s(fp, "ylabel=%s\n", ylabel_.c_str());
 				auto vec4 = background_color_.ToVec4b();
 				fprintf_s(fp, "%d %d %d %d\n", vec4[0], vec4[1], vec4[2], vec4[3]);
 				vec4 = text_color_.ToVec4b();
@@ -1424,18 +1428,18 @@ namespace cvplot
 			{
 				const int LEN = 256;
 				char sz[LEN] = { 0 };
-				fscanf_s(fp, "%s\n", sz, LEN);
-				title_ = sz;
+				fscanf_s(fp, "%[^\n]", sz, LEN);
+				title_ = std::string(sz).substr(6); //! cut "title="
 				int w;
 				int h;
 				fscanf_s(fp, "%d %d\n", &w, &h);
 				SetSize({ w,h });
 				char sz1[LEN] = { 0 };
-				fscanf_s(fp, "%s\n", sz1, LEN);
-				xlabel_ = sz1;
+				fscanf_s(fp, "%[^\n]\n", sz1, LEN);
+				xlabel_ = std::string(sz1).substr(7); //! cut "xlabel="
 				char sz2[LEN] = { 0 };
-				fscanf_s(fp, "%s\n", sz2, LEN);
-				ylabel_ = sz2;
+				fscanf_s(fp, "%[^\n]", sz2, LEN);
+				ylabel_ = std::string(sz2).substr(7); //! cut "ylabel="
 				int r, g, b, a;
 				fscanf_s(fp, "%d %d %d %d\n", &b, &g, &r, &a);
 				auto color1 = Color(r, g, b, a);
@@ -1456,7 +1460,7 @@ namespace cvplot
 				for (int i = 0; i < n; ++i)
 				{
 					char szf[LEN] = { 0 };
-					fscanf_s(fp, "%s\n", szf, LEN);
+					fscanf_s(fp, "%[^\n]", szf, LEN);
 					Series s("", chart::Line);
 					s.Load(szf);
 					AddSeries(s);
@@ -1469,13 +1473,13 @@ namespace cvplot
 		}
 
 	private:
-		static double CalcSnap_(double value)
-		{
-			auto v1 = pow(10, floor(log10(value)));
-			auto v2 = pow(10, floor(log10(value / 2))) * 2;
-			auto v3 = pow(10, floor(log10(value / 5))) * 5;
-			return std::max({ v1,v2,v3 });
-		}
+		//static double CalcSnap_(double value)
+		//{
+		//	auto v1 = pow(10, floor(log10(value)));
+		//	auto v2 = pow(10, floor(log10(value / 2))) * 2;
+		//	auto v3 = pow(10, floor(log10(value / 5))) * 5;
+		//	return std::max({ v1,v2,v3 });
+		//}
 
 	protected:
 		std::string title_;
@@ -1589,12 +1593,15 @@ namespace cvplot
 			cv::destroyWindow(figure_name_);
 		}
 
-		void Save(const std::string& filename, bool saveSubViews = false)
+		void Save(const std::string& filename, bool saveOverview = true, bool saveSubViews = false)
 		{
 			Render_();
 			try
 			{
-				cv::imwrite(filename, buffer_);
+				if (saveOverview)
+				{
+					cv::imwrite(filename, buffer_);
+				}
 				if (saveSubViews && !render_results_.empty())
 				{
 					auto index = filename.find_last_of('.');
@@ -1619,7 +1626,7 @@ namespace cvplot
 			fopen_s(&fp, (folder + alias + ".00000000000000.fdp").c_str(), "w");
 			if (fp)
 			{
-				fprintf_s(fp, "%s\n", figure_name_.c_str());
+				fprintf_s(fp, "name=%s\n", figure_name_.c_str());
 				fprintf_s(fp, "%d %d\n", vertical_count_, horizontal_count_);
 				fprintf_s(fp, "%d %d\n", figure_size_.width, figure_size_.height);
 				fprintf_s(fp, "%d %d\n", horizontal_margin_, vertical_margin_);
@@ -1650,8 +1657,8 @@ namespace cvplot
 
 			const int LEN = 256;
 			char sz[LEN] = { 0 };
-			fscanf_s(fp, "%s\n", sz, LEN);
-			figure_name_ = sz;
+			fscanf_s(fp, "%[^\n]", sz, LEN);
+			figure_name_ = std::string(sz).substr(5); //! cut "name="
 			int rows;
 			int cols;
 			fscanf_s(fp, "%d %d\n", &rows, &cols);
