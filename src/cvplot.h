@@ -148,7 +148,7 @@ namespace cvplot
 				dim = 3;
 				break;
 			default:
-				dim = 1;
+				dim = 0;
 				break;
 			}
 
@@ -173,14 +173,22 @@ namespace cvplot
 	{
 		static const byte GAMMA_LUT[] =
 		{
-			  0,  20,  28,  33,  38,  42,  46,  49,  52,  55,  58,  61,  63,  65,  68,  70,  72,  74,  76,  78,  80,  81,  83,  85,  87,  88,  90,  91,  93,  94,  96,  97,
-			 99, 100, 102, 103, 104, 106, 107, 108, 109, 111, 112, 113, 114, 115, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 128, 129, 130, 131, 132, 133, 134, 135,
-			136, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 147, 148, 149, 150, 151, 152, 153, 153, 154, 155, 156, 157, 158, 158, 159, 160, 161, 162, 162,
-			163, 164, 165, 165, 166, 167, 168, 168, 169, 170, 171, 171, 172, 173, 174, 174, 175, 176, 176, 177, 178, 178, 179, 180, 181, 181, 182, 183, 183, 184, 185, 185,
-			186, 187, 187, 188, 189, 189, 190, 190, 191, 192, 192, 193, 194, 194, 195, 196, 196, 197, 197, 198, 199, 199, 200, 200, 201, 202, 202, 203, 203, 204, 205, 205,
-			206, 206, 207, 208, 208, 209, 209, 210, 210, 211, 212, 212, 213, 213, 214, 214, 215, 216, 216, 217, 217, 218, 218, 219, 219, 220, 220, 221, 222, 222, 223, 223,
-			224, 224, 225, 225, 226, 226, 227, 227, 228, 228, 229, 229, 230, 230, 231, 231, 232, 232, 233, 233, 234, 234, 235, 235, 236, 236, 237, 237, 238, 238, 239, 239,
-			240, 240, 241, 241, 242, 242, 243, 243, 244, 244, 245, 245, 246, 246, 247, 247, 248, 248, 249, 249, 249, 250, 250, 251, 251, 252, 252, 253, 253, 254, 254, 255
+			  0,  20,  28,  33,  38,  42,  46,  49,  52,  55,  58,  61,  63,  65,  68,  70,
+			 72,  74,  76,  78,  80,  81,  83,  85,  87,  88,  90,  91,  93,  94,  96,  97,
+			 99, 100, 102, 103, 104, 106, 107, 108, 109, 111, 112, 113, 114, 115, 117, 118,
+			119, 120, 121, 122, 123, 124, 125, 126, 128, 129, 130, 131, 132, 133, 134, 135,
+			136, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 147, 148, 149,
+			150, 151, 152, 153, 153, 154, 155, 156, 157, 158, 158, 159, 160, 161, 162, 162,
+			163, 164, 165, 165, 166, 167, 168, 168, 169, 170, 171, 171, 172, 173, 174, 174,
+			175, 176, 176, 177, 178, 178, 179, 180, 181, 181, 182, 183, 183, 184, 185, 185,
+			186, 187, 187, 188, 189, 189, 190, 190, 191, 192, 192, 193, 194, 194, 195, 196,
+			196, 197, 197, 198, 199, 199, 200, 200, 201, 202, 202, 203, 203, 204, 205, 205,
+			206, 206, 207, 208, 208, 209, 209, 210, 210, 211, 212, 212, 213, 213, 214, 214,
+			215, 216, 216, 217, 217, 218, 218, 219, 219, 220, 220, 221, 222, 222, 223, 223,
+			224, 224, 225, 225, 226, 226, 227, 227, 228, 228, 229, 229, 230, 230, 231, 231,
+			232, 232, 233, 233, 234, 234, 235, 235, 236, 236, 237, 237, 238, 238, 239, 239,
+			240, 240, 241, 241, 242, 242, 243, 243, 244, 244, 245, 245, 246, 246, 247, 247,
+			248, 248, 249, 249, 249, 250, 250, 251, 251, 252, 252, 253, 253, 254, 254, 255
 		};
 
 		static const Color Transparent = Color(255, 255, 255, 0);
@@ -279,6 +287,9 @@ namespace cvplot
 	public:
 		typedef double value_type;
 
+	private:
+		typedef std::vector<value_type> vector_type;
+
 	public:
 		Series(const std::string& label, chart::Type chartType, marker::Type markerType = marker::None)
 			: label_(label),
@@ -288,25 +299,29 @@ namespace cvplot
 			dimension_(chart::GetDimension(chartType)),
 			enable_legend_(true),
 			render_color_(color::Blue),
-			dirty_(false),
-			mins_(dimension_, DBL_MAX),
-			maxs_(dimension_, DBL_MIN)
+			dirty_(false)
 		{
 			enable_legend_ = (chartType != chart::Elevation);
 		}
 
+		Series() :Series("", chart::Bar)
+		{
+			//
+		}
+
 		Series& operator=(Series& rhs)
 		{
-			label_ = rhs.label_;
-			chart_type_ = rhs.chart_type_;
-			marker_type_ = rhs.marker_type_;
-			marker_size_ = rhs.marker_size_;
-			dimension_ = rhs.dimension_;
-			enable_legend_ = rhs.enable_legend_;
-			values_ = rhs.values_;
-			mins_ = rhs.mins_;
-			maxs_ = rhs.maxs_;
-			dirty_ = true;
+			if (this != &rhs)
+			{
+				label_ = rhs.label_;
+				chart_type_ = rhs.chart_type_;
+				marker_type_ = rhs.marker_type_;
+				marker_size_ = rhs.marker_size_;
+				dimension_ = rhs.dimension_;
+				enable_legend_ = rhs.enable_legend_;
+				values_ = rhs.values_;
+				dirty_ = true;
+			}
 			return *this;
 		}
 
@@ -385,28 +400,11 @@ namespace cvplot
 			}
 
 			values_.push_back(value);
-			if (maxs_[0] < mins_[0])
-			{
-				maxs_[0] = value;
-				mins_[0] = value;
-			}
-			else
-			{
-				if (value > maxs_[0])
-				{
-					maxs_[0] = value;
-				}
-				else if (value < mins_[0])
-				{
-					mins_[0] = value;
-				}
-			}
-
-			dirty_ = false;
+			dirty_ = true;
 			return *this;
 		}
 
-		Series& AddValues(std::vector<value_type> values)
+		Series& AddValues(vector_type values)
 		{
 			if (dimension_ < 1)
 			{
@@ -414,27 +412,9 @@ namespace cvplot
 			}
 
 			auto count = (values.size() / dimension_) * dimension_;
-			int j = 0;
 			for (int i = 0; i < count; ++i)
 			{
 				values_.push_back(values[i]);
-				j = i % dimension_;
-				if (maxs_[j] < mins_[j])
-				{
-					maxs_[j] = values[i];
-					mins_[j] = values[i];
-				}
-				else
-				{
-					if (values[i] > maxs_[j])
-					{
-						maxs_[j] = values[i];
-					}
-					else if (values[i] < mins_[j])
-					{
-						mins_[j] = values[i];
-					}
-				}
 			}
 
 			if (count > 0)
@@ -449,11 +429,6 @@ namespace cvplot
 			if (!values_.empty())
 			{
 				values_.clear();
-				for (int i = 0; i < dimension_; ++i)
-				{
-					maxs_[i] = DBL_MIN;
-					mins_[i] = DBL_MAX;
-				}
 				dirty_ = true;
 			}
 
@@ -468,16 +443,6 @@ namespace cvplot
 		int GetSampleCount() const
 		{
 			return values_.size() / dimension_;
-		}
-
-		std::vector<double> GetMax() const
-		{
-			return std::vector<double>(maxs_);
-		}
-
-		std::vector<double> GetMin() const
-		{
-			return std::vector<double>(mins_);
 		}
 
 		std::string GetLabel() const
@@ -515,9 +480,57 @@ namespace cvplot
 			return dirty_;
 		}
 
+		vector_type CalcMax() const
+		{
+			auto count = values_.size();
+			if (count < dimension_)
+			{
+				return vector_type(dimension_, 0.0);
+			}
+
+			vector_type maxs(dimension_);
+			for (auto j = 0; j < dimension_; ++j)
+			{
+				maxs[j] = values_[j];
+				for (auto i = 0; i < count; i += dimension_)
+				{
+					if (values_[i + j] > maxs[j])
+					{
+						maxs[j] = values_[i + j];
+					}
+				}
+			}
+
+			return maxs;
+		}
+
+		vector_type CalcMin() const
+		{
+			auto count = values_.size();
+			if (count < dimension_)
+			{
+				return vector_type(dimension_, 0.0);
+			}
+
+			vector_type mins(dimension_);
+			for (auto j = 0; j < dimension_; ++j)
+			{
+				mins[j] = values_[j];
+				for (auto i = 0; i < count; i += dimension_)
+				{
+					if (values_[i + j] < mins[j])
+					{
+						mins[j] = values_[i + j];
+					}
+				}
+			}
+
+			return mins;
+		}
+
 		void Draw(cv::Mat& target, int index, int division,
 			double x_min, double x_max, double y_min, double y_max, double z_min, double z_max,
-			double px_start, double py_start, double px_size, double py_size)
+			double px_start, double py_start, double px_delta, double py_delta)
 		{
 			if (values_.size() < dimension_)
 			{
@@ -525,17 +538,17 @@ namespace cvplot
 				return;
 			}
 
-			auto cr = render_color_.ToScalar();
+			if (!dirty_)
+			{
+				return;
+			}
 
-			auto xd = x_max - x_min;
-			auto yd = y_max - y_min;
+			auto cr = render_color_.ToScalar();
 
 			switch (chart_type_)
 			{
 			case chart::Bar:
 			{
-				auto px_delta = px_size / xd;
-				auto py_delta = py_size / yd;
 				auto py_0 = py_delta > 10 ? 0.2 * py_delta : 2;
 				auto x1 = px_start + px_delta * index / (division + 1);
 				auto x2 = x1 + px_delta / (division + 1);
@@ -550,7 +563,7 @@ namespace cvplot
 				for (auto v : values_)
 				{
 					y2 = (int)((v > y_min) ? (v - y_min) * py_delta : py_0);
-					cv::rectangle(target, { (int)(x1+0.5),h - y1 }, { (int)(x2+0.5),h - y2 }, cr, -1);
+					cv::rectangle(target, { (int)(x1 + 0.5),h - y1 }, { (int)(x2 + 0.5),h - y2 }, cr, -1);
 					char szText[16] = { 0 };
 					sprintf_s(szText, "%g", v);
 					fsize = cv::getTextSize(szText, fface, fscale, 1, &fbase);
@@ -562,8 +575,6 @@ namespace cvplot
 			break;
 			case chart::Trends:
 			{
-				auto px_delta = px_size / xd;
-				auto py_delta = py_size / yd;
 				auto py_0 = py_delta > 10 ? 0.2 * py_delta : 2;
 				auto x_0 = px_start + 0.5 * division * px_delta / (division + 1.1);
 				auto x = x_0;
@@ -610,8 +621,6 @@ namespace cvplot
 				std::vector<cv::Point> pts;
 				int x;
 				int y;
-				auto px_delta = px_size / xd;
-				auto py_delta = py_size / yd;
 				for (int i = 0; i < values_.size(); i += 2)
 				{
 					x = (int)(px_start + (values_[i] - x_min) * px_delta + 0.5);
@@ -639,8 +648,6 @@ namespace cvplot
 				std::vector<Color> colors;
 				std::vector<double> zs;
 
-				auto px_delta = px_size / xd;
-				auto py_delta = py_size / yd;
 				int x;
 				int y;
 				for (int i = 0; i < values_.size(); i += 3)
@@ -699,20 +706,12 @@ namespace cvplot
 				fprintf_s(fp, "%d\n", enable_legend_ ? 1 : 0);
 				auto vec4 = render_color_.ToVec4b(); //BGRA
 				fprintf_s(fp, "%d %d %d %d\n", vec4[0], vec4[1], vec4[2], vec4[3]);
-				for (auto v : maxs_)
-				{
-					fprintf_s(fp, "%lf ", v);
-				}
-				for (auto v : mins_)
-				{
-					fprintf_s(fp, "%lf ", v);
-				}
 				int n = values_.size();
 				fprintf_s(fp, "\n%d\n", n);
 				int counter = 0;
 				for (auto v : values_)
 				{
-					fprintf_s(fp, "%lf ", v);
+					fprintf_s(fp, "%g ", v);
 					if (++counter % 32 == 0)
 					{
 						fprintf_s(fp, "\n");
@@ -747,20 +746,6 @@ namespace cvplot
 			fscanf_s(fp, "%d %d %d %d\n", &b, &g, &r, &a);
 			auto color = Color(r, g, b, a);
 			render_color_ = color;
-			maxs_.resize(dimension_);
-			mins_.resize(dimension_);
-			for (int i = 0; i < dimension_; ++i)
-			{
-				double v;
-				fscanf_s(fp, "%lf", &v);
-				maxs_[i] = v;
-			}
-			for (int i = 0; i < dimension_; ++i)
-			{
-				double v;
-				fscanf_s(fp, "%lf", &v);
-				mins_[i] = v;
-			}
 			int n;
 			fscanf_s(fp, "%d\n", &n);
 			if (n > 0)
@@ -773,6 +758,7 @@ namespace cvplot
 					values_[i] = v;
 				}
 			}
+			dirty_ = true;
 
 			fclose(fp);
 
@@ -847,8 +833,6 @@ namespace cvplot
 		bool enable_legend_;
 		Color render_color_;
 		std::vector<value_type> values_;
-		std::vector<value_type> maxs_;
-		std::vector<value_type> mins_;
 		bool dirty_;
 	};
 
@@ -1071,10 +1055,6 @@ namespace cvplot
 
 				double pad = 60.0 / (std::max(size_.width, size_.height));
 				double par = 1.0 - 2 * pad;
-				double px_start = pad * size_.width;
-				double py_start = pad * size_.height;
-				double px_size = par * size_.width;
-				double py_size = par * size_.height;
 
 				//draw y label
 				if (!ylabel_.empty())
@@ -1096,6 +1076,11 @@ namespace cvplot
 				cv::Rect roi(horizontal_margin_, vertical_margin_, size_.width, size_.height);
 				auto target = buffer_(roi);
 
+				auto series_0 = series_map_.begin()->second;
+				int dim = series_0.GetDimension();
+				std::vector<double> mins(dim, DBL_MAX);
+				std::vector<double> maxs(dim, DBL_MIN);
+
 				double x_min = 0;
 				double x_max = 1;
 				double y_min = 0;
@@ -1107,30 +1092,25 @@ namespace cvplot
 				for (auto s : series_map_)
 				{
 					auto count1 = s.second.GetSampleCount();
-					if (count1 > sample_count)
+					auto dim1 = s.second.GetDimension();
+					if (count1 > 0 && dim1 == dim)
 					{
-						sample_count = count1;
-					}
-				}
-
-				auto series_0 = series_map_.begin()->second;
-				int dim = series_0.GetDimension();
-				std::vector<double> mins(dim, DBL_MAX);
-				std::vector<double> maxs(dim, DBL_MIN);
-
-				for (auto s : series_map_)
-				{
-					auto mins1 = s.second.GetMin();
-					auto maxs1 = s.second.GetMax();
-					for (int i = 0; i < dim; ++i)
-					{
-						if (mins1[i] < mins[i])
+						if (count1 > sample_count)
 						{
-							mins[i] = mins1[i];
+							sample_count = count1;
 						}
-						if (maxs1[i] > maxs[i])
+						auto mins1 = s.second.CalcMin();
+						auto maxs1 = s.second.CalcMax();
+						for (int i = 0; i < dim; ++i)
 						{
-							maxs[i] = maxs1[i];
+							if (mins1[i] < mins[i])
+							{
+								mins[i] = mins1[i];
+							}
+							if (maxs1[i] > maxs[i])
+							{
+								maxs[i] = maxs1[i];
+							}
 						}
 					}
 				}
@@ -1167,51 +1147,73 @@ namespace cvplot
 					break;
 				}
 
+				double px_start = pad * size_.width;
+				double py_start = pad * size_.height;
+				double px_size = par * size_.width;
+				double py_size = par * size_.height;
+				auto px_delta = px_size / (x_max - x_min);
+				auto py_delta = py_size / (y_max - y_min);
+
 				//draw axis grids
-				if (enable_grid_ && dim == 2)
+				if (enable_grid_)
 				{
 					auto gridLineColor = grid_color_.ToScalar();
 					auto fface = cv::FONT_HERSHEY_SIMPLEX;
 					int fbase;
 
-					const int GRID_BLOCK_WIDTH = 100;
-					const int GRID_BLOCK_HEIGHT = 100;
-					int n_rows = target.rows / GRID_BLOCK_HEIGHT + 1;
-					int n_cols = target.cols / GRID_BLOCK_WIDTH + 1;
-
-					auto xd = (x_max - x_min) / n_cols;
-					auto yd = (y_max - y_min) / n_rows;
-					auto px_delta = px_size / n_cols;
-					auto py_delta = py_size / n_rows;
+					auto y_snap = CalcSnap_(y_max - y_min) / 5;
 					int x;
 					int y;
 
-					x = (int)px_start;
-					y = size_.height + vertical_margin_;
-					for (auto v = x_min; v < x_max + xd; v += xd)
+					if (dim >= 1)
 					{
-						std::ostringstream out;
-						out << std::setprecision(4) << v;
-						auto str = out.str();
-						cv::Size fsize = getTextSize(str, fface, 0.5, 1, &fbase);
-						cv::line(target, { x, 1 }, { x, size_.height - fsize.height }, gridLineColor, 1, cv::LINE_4);
-						cv::Point org(x + horizontal_margin_ - fsize.width / 2, y);
-						cv::putText(buffer_, str, org, fface, 0.5, text_color_.ToScalar(), 1);
-						x += px_delta;
-					}
+						auto y_offset = (dim == 1 ? py_start : 0.0);
 
-					x = horizontal_margin_;
-					y = size_.height - py_start;
-					for (auto v = y_min; v < y_max + yd; v += yd)
-					{
-						std::ostringstream out;
-						out << std::setprecision(4) << v;
-						auto str = out.str();
-						cv::Size fsize = getTextSize(str, fface, 0.5, 1, &fbase);
-						cv::line(target, { fsize.width, y }, { size_.width - 1, y }, gridLineColor, 1, cv::LINE_4);
-						cv::Point org(x, y + vertical_margin_ + fsize.height / 2);
-						cv::putText(buffer_, str, org, fface, 0.5, text_color_.ToScalar(), 1);
-						y -= py_delta;
+						// horizontal grid lines
+						x = horizontal_margin_;
+						for (auto v = std::ceil(y_min / y_snap) * y_snap; v <= y_max; v += y_snap)
+						{
+							if (v > -DBL_EPSILON && v < DBL_EPSILON)
+							{
+								if (dim == 1)
+								{
+									continue;
+								}
+								v = 0.0;
+							}
+							std::ostringstream out;
+							out << std::setprecision(4) << v;
+							auto str = out.str();
+							cv::Size fsize = getTextSize(str, fface, 0.5, 1, &fbase);
+							y = size_.height + y_offset - (int)(py_start + (v - y_min) * py_delta + 0.5);
+							cv::line(target, { fsize.width, y }, { size_.width - 1, y }, gridLineColor, 1, cv::LINE_4);
+							cv::Point org(x, y + vertical_margin_ + fsize.height / 2);
+							cv::putText(buffer_, str, org, fface, 0.5, text_color_.ToScalar(), 1);
+						}
+
+						if (dim >= 2)
+						{
+							// vertical grid lines
+							const double SNAP = (int)(px_start / px_delta);
+							auto x_snap = std::max(CalcSnap_(x_max - x_min) / 10, SNAP);
+
+							y = size_.height + vertical_margin_;
+							for (auto v = std::floor(x_min / x_snap) * x_snap; v < x_max + x_snap; v += x_snap)
+							{
+								if (v > -DBL_EPSILON && v < DBL_EPSILON)
+								{
+									v = 0.0;
+								}
+								std::ostringstream out;
+								out << std::setprecision(4) << v;
+								auto str = out.str();
+								cv::Size fsize = getTextSize(str, fface, 0.5, 1, &fbase);
+								x = (int)(px_start + (v - x_min) * px_delta + 0.5);
+								cv::line(target, { x, 1 }, { x, size_.height - fsize.height }, gridLineColor, 1, cv::LINE_4);
+								cv::Point org(x + horizontal_margin_ - fsize.width / 2, y);
+								cv::putText(buffer_, str, org, fface, 0.5, text_color_.ToScalar(), 1);
+							}
+						}
 					}
 				}
 
@@ -1227,7 +1229,7 @@ namespace cvplot
 				int index = 0;
 				for (auto s : series_map_)
 				{
-					s.second.Draw(target, index, division, x_min, x_max, y_min, y_max, z_min, z_max, px_start, py_start, px_size, py_size);
+					s.second.Draw(target, index, division, x_min, x_max, y_min, y_max, z_min, z_max, px_start, py_start, px_delta, py_delta);
 					++index;
 				}
 
@@ -1430,10 +1432,10 @@ namespace cvplot
 				char sz[LEN] = { 0 };
 				fscanf_s(fp, "%[^\n]", sz, LEN);
 				title_ = std::string(sz).substr(6); //! cut "title="
-				int w;
-				int h;
-				fscanf_s(fp, "%d %d\n", &w, &h);
-				SetSize({ w,h });
+				int width;
+				int height;
+				fscanf_s(fp, "%d %d\n", &width, &height);
+				SetSize({ width,height });
 				char sz1[LEN] = { 0 };
 				fscanf_s(fp, "%[^\n]\n", sz1, LEN);
 				xlabel_ = std::string(sz1).substr(7); //! cut "xlabel="
@@ -1460,8 +1462,8 @@ namespace cvplot
 				for (int i = 0; i < n; ++i)
 				{
 					char szf[LEN] = { 0 };
-					fscanf_s(fp, "%[^\n]", szf, LEN);
-					Series s("", chart::Line);
+					fscanf_s(fp, "%s\n", szf, LEN);
+					Series s;
 					s.Load(szf);
 					AddSeries(s);
 				}
@@ -1473,13 +1475,13 @@ namespace cvplot
 		}
 
 	private:
-		//static double CalcSnap_(double value)
-		//{
-		//	auto v1 = pow(10, floor(log10(value)));
-		//	auto v2 = pow(10, floor(log10(value / 2))) * 2;
-		//	auto v3 = pow(10, floor(log10(value / 5))) * 5;
-		//	return std::max({ v1,v2,v3 });
-		//}
+		static double CalcSnap_(double value)
+		{
+			auto v1 = pow(10, floor(log10(value)));
+			auto v2 = pow(10, floor(log10(value / 2))) * 2;
+			auto v3 = pow(10, floor(log10(value / 5))) * 5;
+			return std::max({ v1,v2,v3 });
+		}
 
 	protected:
 		std::string title_;
@@ -1564,10 +1566,8 @@ namespace cvplot
 			{
 				throw std::out_of_range("view index out of range");
 			}
-			else
-			{
-				return views_[index];
-			}
+			
+			return views_[index];
 		}
 
 		void Show(bool waitKey = true)
@@ -1593,16 +1593,25 @@ namespace cvplot
 			cv::destroyWindow(figure_name_);
 		}
 
-		void Save(const std::string& filename, bool saveOverview = true, bool saveSubViews = false)
+		void Save(const std::string& filename)
 		{
 			Render_();
 			try
 			{
-				if (saveOverview)
-				{
-					cv::imwrite(filename, buffer_);
-				}
-				if (saveSubViews && !render_results_.empty())
+				cv::imwrite(filename, buffer_);
+			}
+			catch (...)
+			{
+
+			}
+		}
+
+		void SaveViews(const std::string& filename)
+		{
+			Render_();
+			try
+			{
+				if (!render_results_.empty())
 				{
 					auto index = filename.find_last_of('.');
 					std::string prefix = filename.substr(0, index);
@@ -1612,6 +1621,31 @@ namespace cvplot
 						auto filename_1 = prefix + "[" + result.first + "]" + ext;
 						cv::imwrite(filename_1, result.second);
 					}
+				}
+			}
+			catch (...)
+			{
+
+			}
+		}
+
+		void SaveView(const std::string& filename, int hpos, int vpos)
+		{
+			int index = (hpos - 1) * horizontal_count_ + vpos - 1;
+			if (index < 0 || index >= views_.size())
+			{
+				throw std::out_of_range("view index out of range");
+			}
+
+			Render_();
+			try
+			{
+				char sz[8] = { 0 };
+				sprintf_s(sz, "%02d-%02d");
+				auto result = render_results_.find(sz);
+				if (result != render_results_.end())
+				{
+					cv::imwrite(filename, result->second);
 				}
 			}
 			catch (...)
@@ -1663,8 +1697,10 @@ namespace cvplot
 			int cols;
 			fscanf_s(fp, "%d %d\n", &rows, &cols);
 			SetLayout(rows, cols);
-			fscanf_s(fp, "%d %d\n", &cols, &rows);
-			SetSize({ cols,rows });
+			int width;
+			int height;
+			fscanf_s(fp, "%d %d\n", &width, &height);
+			SetSize({ width,height });
 			fscanf_s(fp, "%d %d\n", &horizontal_margin_, &vertical_margin_);
 			for (int i = 1; i <= vertical_count_; ++i)
 			{

@@ -35,7 +35,7 @@ int main()
 
 	auto s3 = cvplot::Series("series-3", cvplot::chart::Scatter, cvplot::marker::Diamond)
 		.SetRenderColor(cvplot::color::Red)
-		.AddValues({ 12,2,5,25,-7,12,15,1 })
+		.AddValues({ 12,2,5,8,39,9,25,-7,12,15,1,8 })
 		.AddValues({ 6,2 });
 
 	auto s4 = cvplot::Series("series-4", cvplot::chart::Elevation);
@@ -53,6 +53,7 @@ int main()
 		.SetXLabel("test-1x")
 		.SetYLabel("test-1y")
 		.SetTextColor(cvplot::color::DarkOrange)
+		.EnableGrid(true)
 		.AddSeries(s1)
 		.AddSeries(s11)
 		.AddSeries(s12);
@@ -87,7 +88,7 @@ int main()
 	//f.Save("figure.png");
 	create_directory("dump\\");
 	f.Dump("dump\\", "fig1");
-	
+
 	build_figure("dump\\", "fig1");
 }
 
@@ -138,5 +139,6 @@ void build_figure(const std::string folder, const std::string alias)
 	cvplot::Figure fig;
 	fig.Load(folder, alias);
 	fig.Show();
-	fig.Save(folder + alias + ".png");
+	//fig.Save(folder + alias + ".png");
+	fig.SaveViews(folder + alias + ".png");
 }
