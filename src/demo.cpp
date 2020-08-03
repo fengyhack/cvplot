@@ -110,11 +110,12 @@ void create_directory(const std::string dir)
 		pos += 1;
 	}
 
-	pos = dir.find('\\', pos + 1);
-	if (pos == dir.npos)
+	auto pos_ = dir.find('\\', pos + 1);
+	if (pos_ == dir.npos)
 	{
-		pos = dir.find('/', pos + 1);
-	}
+		pos_ = dir.find('/', pos + 1);
+	}	
+	pos = pos_;
 
 	if (pos == dir.npos)
 	{
@@ -126,11 +127,12 @@ void create_directory(const std::string dir)
 	{
 		auto s = dir.substr(0, pos);
 		_mkdir(s.c_str());
-		pos = dir.find('\\', pos + 1);
-		if (pos == dir.npos)
+		auto pos_ = dir.find('\\', pos + 1);
+		if (pos_ == dir.npos)
 		{
-			pos = dir.find('/', pos + 1);
+			pos_ = dir.find('/', pos + 1);
 		}
+		pos = pos_;
 	} while (pos != dir.npos);
 }
 

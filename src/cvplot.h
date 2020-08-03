@@ -1502,7 +1502,7 @@ namespace cvplot
 	class Figure
 	{
 	public:
-		Figure()
+		Figure(bool autoIndex = true)
 			: horizontal_count_(1),
 			vertical_count_(1),
 			horizontal_margin_(20),
@@ -1510,7 +1510,7 @@ namespace cvplot
 			figure_size_({ 800,800 }),
 			buffer_(800, 800, CV_8UC4, color::Gray.ToScalar())
 		{
-			int index = util::GetUniqueWindowIndex();
+			int index = autoIndex ? util::GetUniqueWindowIndex() : 0;
 			char sz[16] = { 0 };
 			sprintf_s(sz, "fig-%09d", index);
 			figure_name_ = sz;
@@ -1566,7 +1566,7 @@ namespace cvplot
 			{
 				throw std::out_of_range("view index out of range");
 			}
-			
+
 			return views_[index];
 		}
 
@@ -1585,6 +1585,7 @@ namespace cvplot
 			if (waitKey)
 			{
 				cv::waitKey();
+				cv::destroyWindow(figure_name_);
 			}
 		}
 
