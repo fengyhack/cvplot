@@ -138,7 +138,7 @@ void create_directory(const std::string dir)
 
 void build_figure(const std::string folder, const std::string alias)
 {
-	cvplot::Figure fig;
+	cvplot::Figure fig(false);
 	fig.Load(folder, alias);
 	fig.Show();
 	//fig.Save(folder + alias + ".png");
