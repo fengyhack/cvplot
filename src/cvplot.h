@@ -1570,6 +1570,25 @@ namespace cvplot
 			return views_[index];
 		}
 
+		void Show(std::string title, bool waitKey = true)
+		{
+			Render_();
+			cv::namedWindow(title, cv::WINDOW_AUTOSIZE);
+			const int SCW = 1920;
+			const int SCH = 800;
+			int x = (SCW - figure_size_.width) / 2;
+			int y = (SCH - figure_size_.height) / 2;
+			x = (x > 0 && x < 200) ? x : 10;
+			y = (y > 0 && y < 200) ? y : 10;
+			cv::moveWindow(title, x, y);
+			cv::imshow(title, buffer_);
+			if (waitKey)
+			{
+				cv::waitKey();
+				cv::destroyWindow(title);
+			}
+		}
+
 		void Show(bool waitKey = true)
 		{
 			Render_();
