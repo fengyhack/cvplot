@@ -1661,7 +1661,7 @@ namespace cvplot
 			try
 			{
 				char sz[8] = { 0 };
-				sprintf_s(sz, "%02d-%02d");
+				sprintf_s(sz, "%02d-%02d", hpos, vpos);
 				auto result = render_results_.find(sz);
 				if (result != render_results_.end())
 				{
