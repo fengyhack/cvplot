@@ -5,6 +5,7 @@ void create_directory(const std::string dir);
 
 void build_figure(const std::string folder, const std::string alias);
 
+
 int main()
 {
 	auto s1 = cvplot::Series("series-1", cvplot::chart::Bar)
@@ -92,7 +93,6 @@ int main()
 	build_figure("dump\\", "fig1");
 }
 
-
 void create_directory(const std::string dir)
 {
 	if (dir.empty())
@@ -138,8 +138,9 @@ void create_directory(const std::string dir)
 
 void build_figure(const std::string folder, const std::string alias)
 {
-	cvplot::Figure fig(false);
+	cvplot::Figure fig;
 	fig.Load(folder, alias);
+	fig.EnableMouseMove(true);
 	fig.Show();
 	//fig.Save(folder + alias + ".png");
 	fig.SaveViews(folder + alias + ".png");

@@ -29,6 +29,7 @@ Easy to use (one header file ONLY).
 - Different markers
 - Axis grid
 - **Dump & load with file**  (just like `serialization/ deserialization`)
+- *Mouse move*
 
 
 ## Usage ##
