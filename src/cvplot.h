@@ -27,6 +27,11 @@ namespace cvplot
 			a_ = a;
 		}
 
+		Color Clone()
+		{
+			return Color(r_, g_, b_, a_);
+		}
+
 		Color() : Color(0, 0, 0)
 		{
 			//
@@ -851,9 +856,9 @@ namespace cvplot
 			dirty_(false),
 			horizontal_margin_(50),
 			vertical_margin_(80),
-			x_min_(0),y_min_(0),
-			px_start_(0),py_start_(0),
-			px_delta_(0),py_delta_(0)
+			x_min_(0), y_min_(0),
+			px_start_(0), py_start_(0),
+			px_delta_(0), py_delta_(0)
 		{
 			if (size.width > 0 && size.height > 0)
 			{
@@ -1084,13 +1089,6 @@ namespace cvplot
 				std::vector<double> mins(dim, DBL_MAX);
 				std::vector<double> maxs(dim, DBL_MIN);
 
-				double x_min = 0;
-				double x_max = 1;
-				double y_min = 0;
-				double y_max = 1;
-				double z_min = 0;
-				double z_max = 0;
-
 				int sample_count = 0;
 				for (auto s : series_map_)
 				{
@@ -1118,29 +1116,36 @@ namespace cvplot
 					}
 				}
 
+				x_min_ = 0;
+				y_min_ = 0;
+				double x_max = 1;
+				double y_max = 1;
+				double z_min = 0;
+				double z_max = 0;
+
 				switch (dim)
 				{
 				case 1:
 				{
-					x_min = 1.0;
+					x_min_ = 1.0;
 					x_max = sample_count;
-					y_min = mins[0];
+					y_min_ = mins[0];
 					y_max = maxs[0];
 				}
 				break;
 				case 2:
 				{
-					x_min = mins[0];
+					x_min_ = mins[0];
 					x_max = maxs[0];
-					y_min = mins[1];
+					y_min_ = mins[1];
 					y_max = maxs[1];
 				}
 				break;
 				case 3:
 				{
-					x_min = mins[0];
+					x_min_ = mins[0];
 					x_max = maxs[0];
-					y_min = mins[1];
+					y_min_ = mins[1];
 					y_max = maxs[1];
 					z_min = mins[2];
 					z_max = maxs[2];
@@ -1150,19 +1155,12 @@ namespace cvplot
 					break;
 				}
 
-				double px_start = pad * size_.width;
-				double py_start = pad * size_.height;
 				double px_size = par * size_.width;
 				double py_size = par * size_.height;
-				auto px_delta = px_size / (x_max - x_min);
-				auto py_delta = py_size / (y_max - y_min);
-
-				x_min_ = x_min;
-				y_min_ = y_min;
-				px_start_ = px_start;
-				py_start_ = py_start;
-				px_delta_ = px_delta;
-				py_delta_ = py_delta;
+				px_start_ = pad * size_.width;
+				py_start_ = pad * size_.height;
+				px_delta_ = px_size / (x_max - x_min_);
+				py_delta_ = py_size / (y_max - y_min_);
 
 				//draw axis grids
 				if (enable_grid_)
@@ -1171,17 +1169,17 @@ namespace cvplot
 					auto fface = cv::FONT_HERSHEY_SIMPLEX;
 					int fbase;
 
-					auto y_snap = CalcSnap_(y_max - y_min) / 5;
+					auto y_snap = CalcSnap_(y_max - y_min_) / 5;
 					int x;
 					int y;
 
 					if (dim >= 1)
 					{
-						auto y_offset = (dim == 1 ? py_start : 0.0);
+						auto y_offset = (dim == 1 ? py_start_ : 0.0);
 
 						// horizontal grid lines
 						x = horizontal_margin_;
-						for (auto v = std::ceil(y_min / y_snap) * y_snap; v <= y_max; v += y_snap)
+						for (auto v = std::ceil(y_min_ / y_snap) * y_snap; v <= y_max; v += y_snap)
 						{
 							if (v > -DBL_EPSILON && v < DBL_EPSILON)
 							{
@@ -1195,7 +1193,7 @@ namespace cvplot
 							out << std::setprecision(4) << v;
 							auto str = out.str();
 							cv::Size fsize = getTextSize(str, fface, 0.5, 1, &fbase);
-							y = size_.height + y_offset - (int)(py_start + (v - y_min) * py_delta + 0.5);
+							y = size_.height + y_offset - (int)(py_start_ + (v - y_min_) * py_delta_ + 0.5);
 							cv::line(target, { fsize.width, y }, { size_.width - 1, y }, gridLineColor, 1, cv::LINE_4);
 							cv::Point org(x, y + vertical_margin_ + fsize.height / 2);
 							cv::putText(buffer_, str, org, fface, 0.5, text_color_.ToScalar(), 1);
@@ -1204,11 +1202,11 @@ namespace cvplot
 						if (dim >= 2)
 						{
 							// vertical grid lines
-							const double SNAP = (int)(px_start / px_delta);
-							auto x_snap = std::max(CalcSnap_(x_max - x_min) / 10, SNAP);
+							const double SNAP = (int)(px_start_ / px_delta_);
+							auto x_snap = std::max(CalcSnap_(x_max - x_min_) / 10, SNAP);
 
 							y = size_.height + vertical_margin_;
-							for (auto v = std::floor(x_min / x_snap) * x_snap; v < x_max + x_snap; v += x_snap)
+							for (auto v = std::floor(x_min_ / x_snap) * x_snap; v < x_max + x_snap; v += x_snap)
 							{
 								if (v > -DBL_EPSILON && v < DBL_EPSILON)
 								{
@@ -1218,7 +1216,7 @@ namespace cvplot
 								out << std::setprecision(4) << v;
 								auto str = out.str();
 								cv::Size fsize = getTextSize(str, fface, 0.5, 1, &fbase);
-								x = (int)(px_start + (v - x_min) * px_delta + 0.5);
+								x = (int)(px_start_ + (v - x_min_) * px_delta_ + 0.5);
 								cv::line(target, { x, 1 }, { x, size_.height - fsize.height }, gridLineColor, 1, cv::LINE_4);
 								cv::Point org(x + horizontal_margin_ - fsize.width / 2, y);
 								cv::putText(buffer_, str, org, fface, 0.5, text_color_.ToScalar(), 1);
@@ -1239,7 +1237,7 @@ namespace cvplot
 				int index = 0;
 				for (auto s : series_map_)
 				{
-					s.second.Draw(target, index, division, x_min, x_max, y_min, y_max, z_min, z_max, px_start, py_start, px_delta, py_delta);
+					s.second.Draw(target, index, division, x_min_, x_max, y_min_, y_max, z_min, z_max, px_start_, py_start_, px_delta_, py_delta_);
 					++index;
 				}
 
@@ -1369,15 +1367,15 @@ namespace cvplot
 			dirty_ = true;
 		}
 
-		std::string Capture(int x, int y)
+		std::string Capture(double x, double y)
 		{
 			if (dirty_ || series_map_.empty())
 			{
 				return "out_of_range";
 			}
 
-			if (x < px_start_ || x >= size_.width
-				|| y < py_start_ || y >= size_.height)
+			if (x < horizontal_margin_ || x >= size_.width - horizontal_margin_
+				|| y < vertical_margin_ || y >= size_.height - vertical_margin_)
 			{
 				return "";
 			}
@@ -1385,7 +1383,7 @@ namespace cvplot
 			auto x_val = (x - px_start_) / px_delta_ + x_min_;
 			auto y_val = (size_.height - y - py_start_) / py_delta_ + y_min_;
 			std::ostringstream oss;
-			oss << "(x:" << x_val << ", y:" << y_val << ")";
+			oss << "P(" << x_val << ", " << y_val << ")";
 			return oss.str();
 		}
 
@@ -1544,22 +1542,48 @@ namespace cvplot
 	{
 	public:
 		virtual void OnMouseMove(int x, int y, std::string& window_name) = 0;
+		virtual void ResetMouseMove(std::string& window_name) = 0;
 	};
 
 	namespace mouse
 	{
 		static std::string window_name__ = "";
-		static int x__ = INT_MIN;
-		static int y__ = INT_MIN;
+		static int x__ = INT_MAX;
+		static int y__ = INT_MAX;
+		static int x_max__ = INT_MAX;
+		static int y_max__ = INT_MAX;
+
+		static void update_window(std::string& name, cv::Size& size)
+		{
+			window_name__ = name;
+			x_max__ = size.width - 5;
+			y_max__ = size.height - 5;
+		}
+
 		static void event_handler(int event, int x, int y, int flags, void* param)
 		{
 			if (event == cv::EVENT_MOUSEMOVE
-				&& abs(x__ - x) > 1 || abs(y__ - y) > 1)
+				&& ( abs(x__ - x) > 0 || abs(y__ - y) > 0 ) )
 			{
+				bool reset = false;
+				if (x > x_max__ || (x__ < 5 && x < x__) ||
+					y > y_max__ || (y__ < 5 && y < y__))
+				{
+					reset = true;
+				}
+
 				x__ = x;
 				y__ = y;
+
 				auto p = reinterpret_cast<IMouseMove*>(param);
-				p->OnMouseMove(x, y, window_name__);
+				if (reset)
+				{
+					p->ResetMouseMove(window_name__);
+				}
+				else
+				{
+					p->OnMouseMove(x, y, window_name__);
+				}
 			}
 		}
 	}
@@ -1568,12 +1592,12 @@ namespace cvplot
 	{
 	public:
 		Figure(bool autoIndex = true)
-			: horizontal_count_(1),
-			vertical_count_(1),
+			: total_rows_(1),
+			total_cols_(1),
 			horizontal_margin_(20),
 			vertical_margin_(20),
 			figure_size_({ 800,800 }),
-			view_size_({0,0}),
+			view_size_({ 0,0 }),
 			background_color_(color::Gray),
 			buffer_(800, 800, CV_8UC4, background_color_.ToScalar()),
 			enable_mouse_move_(false)
@@ -1584,13 +1608,13 @@ namespace cvplot
 			figure_name_ = sz;
 			views_.push_back(View());
 
-			auto res_width = figure_size_.width - (horizontal_count_ + 1) * horizontal_margin_;
-			auto res_height = figure_size_.height - (vertical_count_ + 1) * vertical_margin_;
+			auto res_width = figure_size_.width - (total_cols_ + 1) * horizontal_margin_;
+			auto res_height = figure_size_.height - (total_rows_ + 1) * vertical_margin_;
 			view_size_ =
 			{
-				res_width / horizontal_count_,
-				res_height / vertical_count_
-			};
+				res_width / total_cols_,
+				res_height / total_rows_
+			};			
 		}
 
 		~Figure()
@@ -1607,12 +1631,12 @@ namespace cvplot
 				cv::resize(buffer_, tmp, figure_size_, 0, 0, cv::INTER_NEAREST);
 				buffer_ = tmp;
 
-				auto res_width = figure_size_.width - (horizontal_count_ + 1) * horizontal_margin_;
-				auto res_height = figure_size_.height - (vertical_count_ + 1) * vertical_margin_;
+				auto res_width = figure_size_.width - (total_cols_ + 1) * horizontal_margin_;
+				auto res_height = figure_size_.height - (total_rows_ + 1) * vertical_margin_;
 				view_size_ =
 				{
-					res_width / horizontal_count_,
-					res_height / vertical_count_
+					res_width / total_cols_,
+					res_height / total_rows_
 				};
 			}
 			return *this;
@@ -1620,21 +1644,26 @@ namespace cvplot
 
 		Figure& SetLayout(int rows, int cols)
 		{
-			int count_ = horizontal_count_ * vertical_count_;
+			int count_ = total_rows_ * total_cols_;
 			int count = rows * cols;
 			if (count_ != count)
 			{
 				views_.resize(count, View("", { 800,800 }));
 			}
 
-			horizontal_count_ = cols;
-			vertical_count_ = rows;
+			total_rows_ = rows;
+			total_cols_ = cols;
 			return *this;
 		}
 
-		Figure& SetView(View& view, int hpos, int vpos)
+		Figure& SetView(View& view, int row, int col)
 		{
-			int index = (hpos - 1) * horizontal_count_ + vpos - 1;
+			if (row < 0 || col < 0)
+			{
+				throw std::out_of_range("view index out of range");
+			}
+
+			int index = (row - 1) * total_cols_ + col - 1;
 			if (index < 0 || index >= views_.size())
 			{
 				throw std::out_of_range("view index out of range");
@@ -1643,9 +1672,9 @@ namespace cvplot
 			return *this;
 		}
 
-		View& SelectView(int hpos, int vpos)
+		View& SelectView(int row, int col)
 		{
-			int index = (hpos - 1) * horizontal_count_ + vpos - 1;
+			int index = (row - 1) * total_cols_ + col - 1;
 			if (index < 0 || index >= views_.size())
 			{
 				throw std::out_of_range("view index out of range");
@@ -1668,15 +1697,12 @@ namespace cvplot
 			if (enable_mouse_move_)
 			{
 				cv::imshow(title, buffer_);
-				mouse::window_name__ = title;
+				mouse::update_window(title, figure_size_);
 				cv::setMouseCallback(title, mouse::event_handler, this);
 			}
 			else
 			{
-				cv::Rect rect(0, figure_size_.height - vertical_margin_, figure_size_.width, vertical_margin_);
-				cv::Mat m(vertical_margin_, figure_size_.width, CV_8UC4, background_color_.ToScalar());
-				m.copyTo(buffer_(rect));
-				cv::imshow(title, buffer_);
+				ResetMouseMove(title);
 			}
 			if (waitKey)
 			{
@@ -1699,15 +1725,12 @@ namespace cvplot
 			if (enable_mouse_move_)
 			{
 				cv::imshow(figure_name_, buffer_);
-				mouse::window_name__ = figure_name_;
+				mouse::update_window(figure_name_, figure_size_);
 				cv::setMouseCallback(figure_name_, mouse::event_handler, this);
 			}
 			else
 			{
-				cv::Rect rect(0, figure_size_.height - vertical_margin_, figure_size_.width, vertical_margin_);
-				cv::Mat m(vertical_margin_, figure_size_.width, CV_8UC4, background_color_.ToScalar());
-				m.copyTo(buffer_(rect));
-				cv::imshow(figure_name_, buffer_);
+				ResetMouseMove(figure_name_);
 			}
 			if (waitKey)
 			{
@@ -1757,9 +1780,9 @@ namespace cvplot
 			}
 		}
 
-		void SaveView(const std::string& filename, int hpos, int vpos)
+		void SaveView(const std::string& filename, int row, int col)
 		{
-			int index = (hpos - 1) * horizontal_count_ + vpos - 1;
+			int index = (row - 1) * total_cols_ + col - 1;
 			if (index < 0 || index >= views_.size())
 			{
 				throw std::out_of_range("view index out of range");
@@ -1769,7 +1792,7 @@ namespace cvplot
 			try
 			{
 				char sz[8] = { 0 };
-				sprintf_s(sz, "%02d-%02d", hpos, vpos);
+				sprintf_s(sz, "%02d-%02d", row, col);
 				auto result = render_results_.find(sz);
 				if (result != render_results_.end())
 				{
@@ -1789,16 +1812,16 @@ namespace cvplot
 			if (fp)
 			{
 				fprintf_s(fp, "name=%s\n", figure_name_.c_str());
-				fprintf_s(fp, "%d %d\n", vertical_count_, horizontal_count_);
+				fprintf_s(fp, "%d %d\n", total_rows_, total_cols_);
 				fprintf_s(fp, "%d %d\n", figure_size_.width, figure_size_.height);
 				fprintf_s(fp, "%d %d\n", horizontal_margin_, vertical_margin_);
-				for (int i = 1; i <= vertical_count_; ++i)
+				for (int r = 1; r <= total_rows_; ++r)
 				{
-					for (int j = 1; j <= horizontal_count_; ++j)
+					for (int c = 1; c <= total_cols_; ++c)
 					{
-						auto v = SelectView(i, j);
+						auto v = SelectView(r, c);
 						char sz[32] = { 0 };
-						sprintf_s(sz, ".%02d-%02d", i, j);
+						sprintf_s(sz, ".%02d-%02d", r, c);
 						auto prefix = folder + alias + sz;
 						v.Dump(prefix);
 						fprintf_s(fp, "%s\n", prefix.c_str());
@@ -1830,17 +1853,17 @@ namespace cvplot
 			fscanf_s(fp, "%d %d\n", &width, &height);
 			SetSize({ width,height });
 			fscanf_s(fp, "%d %d\n", &horizontal_margin_, &vertical_margin_);
-			for (int i = 1; i <= vertical_count_; ++i)
+			for (int r = 1; r <= rows; ++r)
 			{
-				for (int j = 1; j <= horizontal_count_; ++j)
+				for (int c = 1; c <= cols; ++c)
 				{
 					View v;
 					char sz[32] = { 0 };
-					sprintf_s(sz, ".%02d-%02d", i, j);
+					sprintf_s(sz, ".%02d-%02d", r, c);
 					auto prefix = folder + alias + sz;
 					v.Load(prefix);
-					SetView(v, i, j);
-					SelectView(i, j).Invalidate();
+					SetView(v, r, c);
+					SelectView(r, c).Invalidate();
 				}
 			}
 			fclose(fp);
@@ -1857,25 +1880,33 @@ namespace cvplot
 			cv::Mat m(vertical_margin_, figure_size_.width, CV_8UC4, background_color_.ToScalar());
 			m.copyTo(buffer_(rect));
 
-			int vx = 0;
-			int vy = 0;
-			int index = ViewPoint_(x, y, vx, vy);
-			if (index < 0)
+			if (x<horizontal_margin_ || x>figure_size_.width - horizontal_margin_
+				|| y<vertical_margin_ || y>figure_size_.height - vertical_margin_)
 			{
 				return;
 			}
 
 			std::ostringstream oss;
-			oss << "mouse:(" << x << "," << y << ") view:"
-				<< views_[index].GetTitle() << " "
-				<< views_[index].Capture(vx, vy);
+			oss << "M(" << x << "," << y << ")";
+
+			Color textColor = color::White;
+			double vx = 0;
+			double vy = 0;
+			auto loc = ViewPoint_(x, y, vx, vy);
+			if (loc.x > 0 && loc.y > 0)
+			{
+				auto view = SelectView(loc.x, loc.y);
+				oss << " V(" << view.GetTitle() << ") " << view.Capture(vx, vy);
+				auto cr = view.GetTextColor();
+				textColor = cr;
+			}
 
 			auto str = oss.str();
 
 			auto fface = cv::FONT_HERSHEY_PLAIN;
 			int fbase;
 			cv::Size fsize = cv::getTextSize(str, fface, 1.0, 1, &fbase);
-			auto textColor = views_[index].GetTextColor();
+
 			cv::rectangle(buffer_,
 				{
 					rect.width / 2 - fsize.width / 2 - 5,
@@ -1883,14 +1914,22 @@ namespace cvplot
 					fsize.width + 10,
 					vertical_margin_ - 2
 				},
-				textColor.Reverse().Linear(0.5).ToScalar(), -1);
-			cv::putText(buffer_, str, 
-				{ 
+				textColor.Cut(64).ToScalar(), -1);
+			cv::putText(buffer_, str,
+				{
 					rect.width / 2 - fsize.width / 2,
-					figure_size_.height - fsize.height + fbase 
-				}, 
-				fface, 1.0, 
-				textColor.ToScalar());
+					figure_size_.height - fsize.height + fbase
+				},
+				fface, 1.0,
+				textColor.Lift(192).ToScalar());
+			cv::imshow(window_name, buffer_);
+		}
+
+		void ResetMouseMove(std::string& window_name)
+		{
+			cv::Rect rect(0, figure_size_.height - vertical_margin_, figure_size_.width, vertical_margin_);
+			cv::Mat m(vertical_margin_, figure_size_.width, CV_8UC4, background_color_.ToScalar());
+			m.copyTo(buffer_(rect));
 			cv::imshow(window_name, buffer_);
 		}
 
@@ -1909,19 +1948,19 @@ namespace cvplot
 
 			if (dirty_)
 			{
-				cv::Rect roi(horizontal_margin_, 0, view_size_.width, view_size_.height);
+				cv::Rect roi(horizontal_margin_, vertical_margin_, view_size_.width, view_size_.height);
 
 				int index = 0;
-				for (int i = 0; i < horizontal_count_; ++i)
+				for (int r = 1; r <= total_rows_; ++r)
 				{
-					roi.y = vertical_margin_;
-					for (int j = 0; j < vertical_count_; ++j)
+					roi.x = horizontal_margin_;
+					for (int c = 1; c <= total_cols_; ++c)
 					{
 						auto vbuf = views_[index].Render().GetBuffer();
 						if (!vbuf.empty())
 						{
 							char sz[8] = { 0 };
-							sprintf_s(sz, "%02d-%02d", j + 1, i + 1);
+							sprintf_s(sz, "%02d-%02d", r, c);
 							if (render_results_.find(sz) == render_results_.end())
 							{
 								render_results_.insert({ sz, vbuf });
@@ -1944,58 +1983,59 @@ namespace cvplot
 							}
 						}
 						++index;
-						roi.y += (view_size_.height + vertical_margin_);
-					}
-					roi.x += (view_size_.width + horizontal_margin_);
+						roi.x += (view_size_.width + horizontal_margin_);
+					}					
+					roi.y += (view_size_.height + vertical_margin_);
 				}
 
 				dirty_ = false;
 			}
 		}
 
-		int ViewPoint_(int x, int y, int& view_x, int& view_y)
+		cv::Point2i ViewPoint_(int x, int y, double& view_x, double& view_y)
 		{
 			int xmin = 0, xmax = 0;
 			int ymin = 0, ymax = 0;
 
-			int vpos = -1;
-			for (int i = 1; i <= horizontal_count_; ++i)
+			int col = -1;
+			for (int i = 1; i <= total_cols_; ++i)
 			{
 				xmin = (i - 1) * (view_size_.width + horizontal_margin_) + horizontal_margin_;
 				xmax = xmin + view_size_.width;
 				if (xmin <= x && x <= xmax)
 				{
-					vpos = i;
+					col = i;
 					break;
 				}
 			}
 
-			int hpos = -1;
-			for (int i = 1; i <= vertical_count_; ++i)
+			int row = -1;
+			for (int i = 1; i <= total_rows_; ++i)
 			{
 				ymin = (i - 1) * (view_size_.height + vertical_margin_) + vertical_margin_;
 				ymax = ymin + view_size_.height;
 				if (ymin <= y && y <= ymax)
 				{
-					hpos = i;
+					row = i;
 					break;
 				}
 			}
 
-			int index = (hpos - 1) * horizontal_count_ + vpos - 1;
-			if (hpos > 0 && vpos > 0 && index >= 0 && index < views_.size()
+			int index = (row - 1) * total_cols_ + col - 1;
+			if (row > 0 && row <= total_rows_ && col > 0 && col<= total_cols_
 				&& view_size_.width > 1 && view_size_.height > 1)
 			{
 				auto actual_size = views_[index].GetSize();
-				view_x = (int)((double)(x - xmin) * actual_size.width / view_size_.width);
-				view_y = (int)((double)(y - ymin) * actual_size.height / view_size_.height);
+				view_x = (double)(x - xmin) * actual_size.width / view_size_.width;
+				view_y = (double)(y - ymin) * actual_size.height / view_size_.height;
 			}
 			else
 			{
-				index = -1;
+				row = -1;
+				col = -1;
 			}
 
-			return index;
+			return { row,col };
 		}
 
 	private:
@@ -2005,8 +2045,8 @@ namespace cvplot
 		cv::Size figure_size_;
 		cv::Size view_size_;
 		Color background_color_;
-		int horizontal_count_;
-		int vertical_count_;
+		int total_rows_;
+		int total_cols_;
 		int horizontal_margin_;
 		int vertical_margin_;
 		cv::Mat buffer_;

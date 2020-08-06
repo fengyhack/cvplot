@@ -114,7 +114,7 @@ void create_directory(const std::string dir)
 	if (pos_ == dir.npos)
 	{
 		pos_ = dir.find('/', pos + 1);
-	}	
+	}
 	pos = pos_;
 
 	if (pos == dir.npos)
