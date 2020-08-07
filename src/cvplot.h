@@ -456,6 +456,32 @@ namespace cvplot
 			return *this;
 		}
 
+		Series& AppendArray(vector_type values)
+		{
+			if (dimension_ != 2)
+			{
+				return *this;
+			}
+
+			auto idx = values_.size();
+			if (!values_.empty())
+			{
+				idx = values_[idx - 2];
+			}
+			auto count = values.size();
+			for (int i = 0; i < count; ++i)
+			{
+				values_.push_back(++idx);
+				values_.push_back(values[i]);
+			}
+
+			if (idx > 0)
+			{
+				dirty_ = true;
+			}
+			return *this;
+		}
+
 		Series& Clear()
 		{
 			if (!values_.empty())
@@ -797,7 +823,7 @@ namespace cvplot
 			return *this;
 		}
 
-	public:	
+	public:
 		static Series Convert(Series& source, chart::Type chartType)
 		{
 			if (source.GetDimension() != 1 || chart::GetDimension(chartType) != 2)
@@ -1614,7 +1640,7 @@ namespace cvplot
 		static void event_handler(int event, int x, int y, int flags, void* param)
 		{
 			if (event == cv::EVENT_MOUSEMOVE
-				&& ( abs(x__ - x) > 0 || abs(y__ - y) > 0 ) )
+				&& (abs(x__ - x) > 0 || abs(y__ - y) > 0))
 			{
 				bool reset = false;
 				if (x > x_max__ || (x__ < 5 && x < x__) ||
@@ -1665,7 +1691,7 @@ namespace cvplot
 			{
 				res_width / total_cols_,
 				res_height / total_rows_
-			};			
+			};
 		}
 
 		~Figure()
@@ -2041,7 +2067,7 @@ namespace cvplot
 						}
 						++index;
 						roi.x += (view_size_.width + horizontal_margin_);
-					}					
+					}
 					roi.y += (view_size_.height + vertical_margin_);
 				}
 
@@ -2079,7 +2105,7 @@ namespace cvplot
 			}
 
 			int index = (row - 1) * total_cols_ + col - 1;
-			if (row > 0 && row <= total_rows_ && col > 0 && col<= total_cols_
+			if (row > 0 && row <= total_rows_ && col > 0 && col <= total_cols_
 				&& view_size_.width > 1 && view_size_.height > 1)
 			{
 				auto actual_size = views_[index].GetSize();

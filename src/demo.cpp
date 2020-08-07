@@ -24,7 +24,8 @@ int main()
 
 	auto s2 = cvplot::Series("series-2", cvplot::chart::Line)
 		.SetRenderColor(cvplot::color::DarkOrange)
-		.AddValues({ 2,32,5,9,7,12,10,1,13,5,19,11,25,2,27,3,32,10 });
+		.AddValues({ 2,32,5,9,7,12,10,1,13,5,19,11,25,2,27,3,32,10 })
+		.AppendArray({ 5,10,9 });
 
 	const int N = 10000;
 	for (int i = 0; i < N; ++i)
