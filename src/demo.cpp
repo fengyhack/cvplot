@@ -59,6 +59,9 @@ int main()
 		.AddSeries(s11)
 		.AddSeries(s12);
 
+	auto s22 = cvplot::Series::Convert(s1, cvplot::chart::Scatter)
+		.SetMarkerType(cvplot::marker::Cross)
+		.SetRenderColor(cvplot::color::Green);
 	auto v2 = cvplot::View()
 		.SetTitle("v-1-2")
 		.SetSize({ 600, 600 })
@@ -68,7 +71,8 @@ int main()
 		.EnableGrid(true)
 		.SetGridColor(cvplot::color::LightGray)
 		.AddSeries(s2)
-		.AddSeries(s3);
+		.AddSeries(s3)
+		.AddSeries(s22);
 
 	auto v3 = cvplot::View()
 		.SetTitle("v-1-3")

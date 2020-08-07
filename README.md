@@ -30,6 +30,7 @@ Easy to use (one header file ONLY).
 - Axis grid
 - **Dump & load with file**  (just like `serialization/ deserialization`)
 - *Mouse move*
+- *Chart type conversion (dimension 1 --> 2)*
 
 
 ## Usage ##

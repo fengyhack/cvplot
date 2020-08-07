@@ -309,6 +309,33 @@ namespace cvplot
 			enable_legend_ = (chartType != chart::Elevation);
 		}
 
+		Series(Series& rhs, chart::Type chartType)
+			:label_(rhs.label_),
+			chart_type_(chartType),
+			marker_type_(rhs.marker_type_),
+			marker_size_(rhs.marker_size_),
+			enable_legend_(rhs.enable_legend_),
+			values_(std::move(rhs.values_)),
+			dimension_(chart::GetDimension(chartType)),
+			dirty_(true)
+		{
+			if (rhs.GetDimension() == 1 && dimension_ == 2)
+			{
+				auto n = values_.size();
+				vector_type values(n * 2);
+				for (auto i = 0; i < n; ++i)
+				{
+					values[2 * i] = i + 1;
+					values[2 * i + 1] = values_[i];
+				}
+				values_ = std::move(values);
+			}
+			else
+			{
+				throw std::exception("invalid conversion (expect: dimension 1-->2)");
+			}
+		}
+
 		Series() :Series("", chart::Bar)
 		{
 			//
@@ -768,6 +795,17 @@ namespace cvplot
 			fclose(fp);
 
 			return *this;
+		}
+
+	public:	
+		static Series Convert(Series& source, chart::Type chartType)
+		{
+			if (source.GetDimension() != 1 || chart::GetDimension(chartType) != 2)
+			{
+				throw std::exception("conversion not supported");
+			}
+
+			return Series(source, chartType);
 		}
 
 	private:
