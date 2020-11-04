@@ -688,7 +688,7 @@ namespace cvplot
 				int r = (marker_size_.width + marker_size_.height);
 				r = (r > 2 && r < 32) ? r : 4;
 
-				if (chart_type_ == chart::Trends || chart_type_ == chart::Line)
+				if (/*chart_type_ == chart::Trends || */chart_type_ == chart::Line)
 				{
 					DrawMarkers_(target, pts, marker_type_, render_color_.Cut(64), r, 2);
 					cv::polylines(target, pts, false, cr, 1, cv::LINE_AA);
@@ -1449,18 +1449,42 @@ namespace cvplot
 
 		std::string Capture(double x, double y)
 		{
-			if (dirty_ || series_map_.empty() || dimension_ != 2
+			if (dirty_ || series_map_.empty() /*|| dimension_ != 2*/
 				|| x < horizontal_margin_ || x >= size_.width - horizontal_margin_
 				|| y < vertical_margin_ || y >= size_.height - vertical_margin_)
 			{
 				return "";
 			}
 
-			auto x_val = (x - px_start_ - horizontal_margin_) / px_delta_ + x_min_;
-			auto y_val = (size_.height - y - py_start_ - vertical_margin_) / py_delta_ + y_min_;
-			std::ostringstream oss;
-			oss << "P(" << x_val << ", " << y_val << ")";
-			return oss.str();
+			switch (dimension_)
+			{
+			case 1:
+			{
+				auto x_val = floor((x - px_start_ - horizontal_margin_) / px_delta_ + x_min_ + 0.05);
+				auto y_val = (size_.height - y - vertical_margin_) / py_delta_ + y_min_;
+				std::ostringstream oss;
+				oss << "T(" << x_val << ", " << y_val << ")";
+				return oss.str();
+			}
+			case 2:
+			{
+				auto x_val = (x - px_start_ - horizontal_margin_) / px_delta_ + x_min_;
+				auto y_val = (size_.height - y - py_start_ - vertical_margin_) / py_delta_ + y_min_;
+				std::ostringstream oss;
+				oss << "P(" << x_val << ", " << y_val << ")";
+				return oss.str();
+			}
+			case 3:
+			{
+				auto x_val = (int)((x - px_start_ - horizontal_margin_) / px_delta_ + x_min_ + 0.5);
+				auto y_val = (int)((size_.height - y - py_start_ - vertical_margin_) / py_delta_ + y_min_ + 0.5);
+				std::ostringstream oss;
+				oss << "R(" << x_val << ", " << y_val << ")";
+				return oss.str();
+			}
+			default:
+				return "";
+			}
 		}
 
 		std::string GetTitle() const
