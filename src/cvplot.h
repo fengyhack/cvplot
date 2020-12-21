@@ -904,7 +904,7 @@ namespace cvplot
 					}
 					values_ = std::move(vals_);
 				}
-			}			
+			}
 			dirty_ = true;
 
 			fclose(fp);
