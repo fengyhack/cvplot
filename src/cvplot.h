@@ -766,16 +766,37 @@ namespace cvplot
 				fprintf_s(fp, "%d %d %d %d\n", vec4[0], vec4[1], vec4[2], vec4[3]);
 				int n = values_.size();
 				fprintf_s(fp, "\n%d\n", n);
+			}
+			fclose(fp);
+		}
+
+		void DumpText(const std::string filename)
+		{
+			FILE* fp = nullptr;
+			fopen_s(&fp, filename.c_str(), "w");
+			if (fp)
+			{
 				int counter = 0;
 				for (auto v : values_)
 				{
 					fprintf_s(fp, "%g ", v);
-					if (++counter % 32 == 0)
+					if (++counter % dimension_ == 0)
 					{
 						fprintf_s(fp, "\n");
 					}
 				}
 				fprintf_s(fp, "\n");
+			}
+			fclose(fp);
+		}
+
+		void DumpBinary(const std::string filename)
+		{
+			FILE* fp = nullptr;
+			fopen_s(&fp, filename.c_str(), "wb");
+			if (fp && values_.size() > 0)
+			{
+				fwrite(values_.data(), sizeof(value_type), values_.size(), fp);
 			}
 			fclose(fp);
 		}
@@ -809,13 +830,81 @@ namespace cvplot
 			if (n > 0)
 			{
 				values_.resize(n);
-				for (int i = 0; i < n; ++i)
+			}
+			else
+			{
+				values_.clear();
+			}
+			dirty_ = true;
+
+			fclose(fp);
+
+			return *this;
+		}
+
+		Series& LoadText(const std::string filename, const bool filterInfNaN)
+		{
+			FILE* fp = nullptr;
+			fopen_s(&fp, filename.c_str(), "r");
+			if (fp == nullptr)
+			{
+				throw std::exception("failed to load series");
+			}
+			if (values_.size() > 0)
+			{
+				for (int i = 0; i < values_.size(); ++i)
 				{
-					double v;
-					fscanf_s(fp, "%lf", &v);
-					values_[i] = v;
+					fscanf_s(fp, "%lf", &values_[i]);
+				}
+				if (filterInfNaN)
+				{
+					vector_type vals_;
+					value_type v;
+					for (int i = 0; i < values_.size(); ++i)
+					{
+						fscanf_s(fp, "%lf", &v);
+						if (!isnan(v) && !isinf(v))
+						{
+							vals_.push_back(v);
+						}
+					}
+					values_ = std::move(vals_);
 				}
 			}
+			dirty_ = true;
+
+			fclose(fp);
+
+			return *this;
+		}
+
+		Series& LoadBinary(const std::string filename, const bool filterInfNaN)
+		{
+			FILE* fp = nullptr;
+			fopen_s(&fp, filename.c_str(), "rb");
+			if (fp == nullptr)
+			{
+				throw std::exception("failed to load series");
+			}
+
+			if (values_.size() > 0)
+			{
+				fread(values_.data(), sizeof(value_type), values_.size(), fp);
+				if (filterInfNaN)
+				{
+					vector_type vals_;
+					value_type v;
+					for (int i = 0; i < values_.size(); ++i)
+					{
+						v = values_[i];
+						if (!isnan(v) && !isinf(v))
+						{
+							vals_.push_back(v);
+						}
+					}
+					values_ = std::move(vals_);
+				}
+			}			
 			dirty_ = true;
 
 			fclose(fp);
@@ -1549,13 +1638,15 @@ namespace cvplot
 					sprintf_s(sz, ".%09d.sdp", ++index);
 					auto filename = prefix + sz;
 					s.second.Dump(filename);
+					s.second.DumpText(filename + ".txt");
+					s.second.DumpBinary(filename + ".bin");
 					fprintf_s(fp, "%s\n", filename.c_str());
 				}
 				fclose(fp);
 			}
 		}
 
-		View& Load(const std::string prefix)
+		View& Load(const std::string prefix, const bool filterInfNaN)
 		{
 			FILE* fp = nullptr;
 			fopen_s(&fp, (prefix + ".000000000.vdp").c_str(), "r");
@@ -1598,6 +1689,8 @@ namespace cvplot
 					fscanf_s(fp, "%s\n", szf, LEN);
 					Series s;
 					s.Load(szf);
+					strcat_s(szf, ".bin");
+					s.LoadBinary(szf, filterInfNaN);
 					AddSeries(s);
 				}
 				fclose(fp);
@@ -1938,7 +2031,7 @@ namespace cvplot
 			}
 		}
 
-		void Load(const std::string& folder, const std::string alias)
+		void Load(const std::string& folder, const std::string alias, bool filterInfNaN = true)
 		{
 			FILE* fp = nullptr;
 			fopen_s(&fp, (folder + alias + ".00000000000000.fdp").c_str(), "r");
@@ -1968,7 +2061,7 @@ namespace cvplot
 					char sz[32] = { 0 };
 					sprintf_s(sz, ".%02d-%02d", r, c);
 					auto prefix = folder + alias + sz;
-					v.Load(prefix);
+					v.Load(prefix, filterInfNaN);
 					SetView(v, r, c);
 					SelectView(r, c).Invalidate();
 				}
